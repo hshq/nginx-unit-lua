@@ -8,7 +8,6 @@ local CFLAGS, LDFLAGS, DBG_OPTS   = _ENV('CFLAGS, LDFLAGS, DBG_OPTS')
 local DEP_OBJS, O_FILES           = _ENV('DEP_OBJS, O_FILES')
 local LIB_NAME, MK_FILE, CC, MAKE = _ENV('LIB_NAME, MK_FILE, CC, MAKE')
 
--- NOTE hsq 各处的 -g --> -O2
 local DEBUG = true
 local COPTS = {
     DEBUG   = cmd{'-g', DBG_OPTS},

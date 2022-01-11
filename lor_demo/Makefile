@@ -1,5 +1,5 @@
 # CFG = conf/config.lor.json
-PORT = 8090
+PORT = 8890
 SOCK = /usr/local/var/run/unit/control.sock
 
 CONF_LUA = conf/config.lor.lua
