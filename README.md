@@ -52,10 +52,12 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 #### 使用说明
 
 1.  进入 lor_demo/ 目录：
+    ```
     ./unitd.lua # 查看配置， demo 的 Unit 配置在 CONF-FILE
-2.  ./unitd.lua save # 生成并存储 json 格式的配置到文件
-3.  ./unitd.lua start # 启动 Unit 服务器， stop/restart
-4.  ./unitd.lua config # save 然后推送配置到 Unit
+    ./unitd.lua save # 生成并存储 json 格式的配置到文件
+    ./unitd.lua start # 启动 Unit 服务器， stop/restart
+    ./unitd.lua config # save 然后推送配置到 Unit
+    ```
 
 #### 参与贡献
 
