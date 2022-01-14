@@ -20,22 +20,33 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 
 #### 安装教程
 
-1.  依赖： [https://github.com/openresty/lua-cjson](lua-cjson)  、
-        [https://github.com/facebookarchive/luaffifb](LuaFFI) 。
-2.  mkdir -p lib/5.1/lnginx-unit lib/5.4/lnginx-unit
+1.  依赖：
+    - [https://github.com/openresty/lua-cjson](lua-cjson)
+    - [https://github.com/facebookarchive/luaffifb](LuaFFI)
+
+2.  ```mkdir -p lib/5.1/lnginx-unit lib/5.4/lnginx-unit```
+
 3.  在 deps/ 中解压 [https://github.com/aklomp/base64](base64) 源码包，
-        修改 ./Makefile ，注释掉目标 lib/libbase64.o 下的 $(OBJCOPY) 指令，
-        （ MacOS 中会导致编译失败、运行失败，找不到符号。）
-        intel 平台执行命令：
-        SSSE3_CFLAGS=-mssse3 SSE41_CFLAGS=-msse4.1 SSE42_CFLAGS=-msse4.2 \
-            AVX2_CFLAGS=-mavx2 AVX_CFLAGS=-mavx \
-            make lib/libbase64.o
-        生成文件 lib/libbase64.o, lib/config.h ，
-        可执行 (cd test; make test) # 执行 test 和 benchmark 。
+    - 修改 ./Makefile ，注释掉目标 lib/libbase64.o 下的 $(OBJCOPY) 指令，
+    - （ MacOS 中会导致编译失败、运行失败，找不到符号。）
+    - intel 平台执行命令（生成文件 lib/libbase64.o, lib/config.h ）：
+        ```
+        SSSE3_CFLAGS=-mssse3 \
+        SSE41_CFLAGS=-msse4.1 \
+        SSE42_CFLAGS=-msse4.2 \
+        AVX2_CFLAGS=-mavx2 \
+        AVX_CFLAGS=-mavx \
+        make lib/libbase64.o
+        ```
+    - 可执行 (cd test; make test) # 执行 test 和 benchmark 。
+
 4.  进入 lbase64/ 目录：
-        ./make.lua # luajit make.lua
-        make
-        make clean
+    ```
+    ./make.lua # luajit make.lua
+    make
+    make clean
+    ```
+
 5.  lnginx-unit 同上一步。
 
 #### 使用说明
