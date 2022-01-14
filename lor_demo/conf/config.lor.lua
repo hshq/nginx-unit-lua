@@ -67,4 +67,5 @@ config.unit = {
     },
 }
 
+_G.unit_config = config
 return config
