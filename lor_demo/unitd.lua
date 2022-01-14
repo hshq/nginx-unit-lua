@@ -41,10 +41,12 @@ local funcs = {}
 
 function funcs.help()
     print 'ARG: \trestart, start, stop, save, config, get'
+    print('CONF-FILE:', CFG_LUA)
     print('HOST:', HOST..':'..PORT)
     print('SOCK:', SOCK)
     print('STATE:', unit.DEFAULT_CONFIG.STATE)
-    print('UNIT-CONF:', sh('cat '..unit.DEFAULT_CONFIG.STATE..'/conf.json'))
+    print('UNIT-CONF:')
+    sh('cat '..unit.DEFAULT_CONFIG.STATE..'/conf.json')
     -- print('CONFIG:', config)
     print('CONFIG:',    prettify)
 end
