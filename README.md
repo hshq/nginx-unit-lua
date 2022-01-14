@@ -28,8 +28,8 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 
 3.  在 deps/ 中解压 [https://github.com/aklomp/base64](base64) 源码包，
     1. 修改 ./Makefile ，注释掉目标 lib/libbase64.o 下的 $(OBJCOPY) 指令，
-    2. （ MacOS 中会导致编译失败、运行失败，找不到符号。）
-    3. intel 平台执行命令（生成文件 lib/libbase64.o, lib/config.h ）：
+        - （ MacOS 中会导致编译失败、运行失败，找不到符号。）
+    2. intel 平台执行命令（生成文件 lib/libbase64.o, lib/config.h ）：
         ```
         SSSE3_CFLAGS=-mssse3 \
         SSE41_CFLAGS=-msse4.1 \
@@ -38,7 +38,7 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
         AVX_CFLAGS=-mavx \
         make lib/libbase64.o
         ```
-    4. 可执行 (cd test; make test) # 执行 test 和 benchmark 。
+    3. 可执行 (cd test; make test) # 执行 test 和 benchmark 。
 
 4.  进入 lbase64/ 目录：
     ```
