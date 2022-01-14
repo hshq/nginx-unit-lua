@@ -38,7 +38,7 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
         AVX_CFLAGS=-mavx \
         make lib/libbase64.o
         ```
-    3. 可执行 (cd test; make test) # 执行 test 和 benchmark 。
+    3. ```(cd test; make test) # 执行 test 和 benchmark```
 
 4.  进入 lbase64/ 目录：
     ```
