@@ -7,9 +7,12 @@
 
 #include <lua.h>
 #include <lauxlib.h>
+#include <lualib.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "lib-nginx-unit.h"
+#include "../deps/adapter.h"
 
 typedef enum boolean_e {
     False = 0,
@@ -135,7 +138,7 @@ LUAMOD_API int ctx_mtd_log(lua_State *L) {
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_STR_FORMAT);
     lua_replace(L, 2);
-    lua_call(L, lua_absindex(L, -1) - 2, 1);
+    lua_call(L, lua_gettop(L) - 2, 1);
     nxt_unit_log(uctx->ctx, level, "%s", lua_tostring(L, -1));
 
     return 0;
@@ -247,13 +250,13 @@ void request_handler(nxt_unit_request_info_t *req) {
     content = lua_tolstring(L, -2, &content_length);
 
     max_fields_count = lua_rawlen(L, -1) / 2;
-    // max_fields_size = luaL_len(L, -2);
+    // max_fields_size = lua_rawlen(L, -2);
     max_fields_size = content_length;
     for (uint32_t i = 0; i < max_fields_count; i++) {
         lua_rawgeti(L, -1, i * 2 + 1);
-        max_fields_size += luaL_len(L, -1);
+        max_fields_size += lua_rawlen(L, -1);
         lua_rawgeti(L, -2, i * 2 + 2);
-        max_fields_size += luaL_len(L, -1);
+        max_fields_size += lua_rawlen(L, -1);
         lua_pop(L, 2);
     }
     max_fields_size += max_fields_count * 4;
@@ -280,7 +283,6 @@ void request_handler(nxt_unit_request_info_t *req) {
         lua_pop(L, 2);
     }
 
-    // rc = nxt_unit_response_add_content(req, "Hi Lua!", sizeof("Hi Lua!")-1);
     rc = nxt_unit_response_add_content(req, content, content_length);
     if (NXT_UNIT_OK != rc) {
         nxt_unit_alert(NULL, "%s 失败！", "add_content");
@@ -340,6 +342,7 @@ static const luaL_Reg ctx_meta_mtds[] = {
     {"__gc",       ctx_mtd_done},
     {NULL,         NULL}};
 
+// NOTE hsq 用函数封装则传入的 luaL_Reg[] 变成指针后无法取得项目数。
 #define new_meta(mt_name, mt, mtds) { \
     rc = luaL_newmetatable(L, mt_name); \
     if (!rc) { \
@@ -351,8 +354,9 @@ static const luaL_Reg ctx_meta_mtds[] = {
     lua_pop(L, 1); \
 }
 
+
 LUAMOD_API int luaopen_unit_core(lua_State *L) {
-    int rc/* , top */;
+    int rc;
 
     luaL_newlib(L, lib_funcs);
 
@@ -367,6 +371,21 @@ LUAMOD_API int luaopen_unit_core(lua_State *L) {
 
     // lua_pushinteger(L, NXT_UNIT_NONE_FIELD);
     // lua_setfield(L, -2, "NONE_FIELD");
+
+    // 注册缺省配置表
+    lua_createtable(L, 0, 8);
+    #define SET_DEFAULT_CONFIG(KEY) \
+        lua_pushliteral(L, #KEY); lua_pushstring(L, NXT_##KEY); lua_rawset(L, -3)
+    SET_DEFAULT_CONFIG(PID);
+    SET_DEFAULT_CONFIG(LOG);
+    SET_DEFAULT_CONFIG(MODULES);
+    SET_DEFAULT_CONFIG(STATE);
+    SET_DEFAULT_CONFIG(TMP);
+    SET_DEFAULT_CONFIG(CONTROL_SOCK);
+    SET_DEFAULT_CONFIG(USER);
+    SET_DEFAULT_CONFIG(GROUP);
+    #undef SET_DEFAULT_CONFIG
+    lua_setfield(L, -2, "DEFAULT_CONFIG");
 
     // 注册返回代码表
     lua_createtable(L, NXT_UNIT_CANCELLED + 1, NXT_UNIT_CANCELLED + 1);
@@ -394,21 +413,25 @@ LUAMOD_API int luaopen_unit_core(lua_State *L) {
     new_meta(MT_CONTEXT, ctx_meta_mtds, ctx_mtds);
 
     // 在注册表中缓存 string.format
-    // top = lua_absindex(L, -1);
-    rc = lua_getglobal(L, "string");
-    if (LUA_TTABLE == rc) {
-        rc = lua_getfield(L, -1, "format");
-        if (LUA_TFUNCTION == rc) {
-            LUA_RIDX_STR_FORMAT = luaL_ref(L, LUA_REGISTRYINDEX);
-        }
-    }
+    // int top = lua_absindex(L, -1);
+    // luaL_openlibs(L);
+    #if 0
+    assert(lua_getglobal(L, "string") == LUA_TTABLE);
+    assert(lua_getfield(L, -1, "format") == LUA_TFUNCTION);
+    LUA_RIDX_STR_FORMAT = luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_pop(L, 1);
+    #else
+    assert(luaL_dostring(L, "return string.format") == 0);
+    // assert(ua_isfunction(L, -1));
+    LUA_RIDX_STR_FORMAT = luaL_ref(L, LUA_REGISTRYINDEX);
+    #endif
+
     if (LUA_NOREF == LUA_RIDX_STR_FORMAT) {
         #define ERR_NEED_STR_FORMAT "log() 需要 string.format(fmt, ...) ！"
         nxt_unit_log(NULL, NXT_UNIT_LOG_ALERT, ERR_NEED_STR_FORMAT);
         luaL_error(L, ERR_NEED_STR_FORMAT);
     }
     // lua_settop(L, top);
-    lua_pop(L, 1);
 
     return 1;
 }

@@ -7,18 +7,31 @@ local INC_DIRS, LD_DIRS, LIBS     = _ENV('INC_DIRS, LD_DIRS, LIBS')
 local CFLAGS, LDFLAGS, DBG_OPTS   = _ENV('CFLAGS, LDFLAGS, DBG_OPTS')
 local DEP_OBJS, O_FILES           = _ENV('DEP_OBJS, O_FILES')
 local LIB_NAME, MK_FILE, CC, MAKE = _ENV('LIB_NAME, MK_FILE, CC, MAKE')
+local is_jit = _ENV('is_jit')
 
 local DEBUG = true
 local COPTS = {
     DEBUG   = cmd{'-g', DBG_OPTS},
     RELEASE = '-O2',
 }
-local LUA_VER = '5.4'
+local LUA_VER = _VERSION:match('^Lua (.+)$')
 local LIB_EXT = 'so'
 
--- /usr/local/lib/pkgconfig/lua$(LUA_VER).pc
-local LUA_INC = '/usr/local/include/lua' .. LUA_VER
-local LUA_LIB = 'lua' .. LUA_VER
+local LUA_INC, LUA_LIB
+if LUA_VER == '5.4' then
+    -- /usr/local/lib/pkgconfig/lua$(LUA_VER).pc
+    LUA_INC = '/usr/local/include/lua' .. LUA_VER
+    -- LUA_LIB = 'lua' .. LUA_VER
+elseif is_jit() then
+    local JIT_DIR = '/usr/local/opt/luajit-openresty'
+    -- lib/pkgconfig/luajit.pc
+    LUA_INC = JIT_DIR .. '/include/luajit-2.1'
+    -- NOTE hsq 产生奇怪问题：遍历 core.so 正常，直接取字段就是 nil 。
+    -- LUA_LIB = 'luajit'
+    -- LD_DIRS = merge({JIT_DIR .. '/lib'}, LD_DIRS)
+else
+    error('Lua 5.4 or LuaJIT required')
+end
 
 local LINE_SEP = ' \\\n\t'
 
@@ -89,8 +102,8 @@ local rules = {{
     },{
         target = 'clean',
         actions = {
-            -- cmd{'rm -f', MK_FILE, cmd(O_FILES), '*.'..LIB_EXT},
-            cmd{'rm -f', MK_FILE, '*.o *.'..LIB_EXT},
+            cmd{'rm -f', MK_FILE, cmd(O_FILES), '*.'..LIB_EXT},
+            -- cmd{'rm -f', MK_FILE, '*.o *.'..LIB_EXT},
         },
     },
 }

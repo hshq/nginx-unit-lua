@@ -8,29 +8,20 @@ local cfg_file = 'conf/' .. cfg_name .. '.lua'
 local pwd = os.getenv('PWD')
 local env = pwd:match('^(.+)/[^/]+$')
 
+local ver = _VERSION:match('^Lua (.+)$')
+
 package.cpath = table.concat({
+    env .. '/lib/'..ver..'/?.so',
     package.cpath,
-    env .. '/lib/5.4/?.so',
 }, ';')
 package.path =  table.concat({
-    package.path,
     pwd .. './app/?.lua',
     pwd .. './?.lua',
-    env .. '/lib/5.4/?.lua',
-    env .. '/lib/?.lua',
     env .. '/lor/?.lua',
+    env .. '/lib/'..ver..'/?.lua',
+    env .. '/lib/?.lua',
+    package.path,
 }, ';')
-
-local typ  = 'web' -- -w[web]/-u[unit]/-a[all]
-local json = false -- -j
-for _, arg in ipairs{...} do
-    arg = arg:lower()
-    if arg == '-w' then     typ = 'web'
-    elseif arg == '-u' then typ = 'unit'
-    elseif arg == '-a' then typ = nil
-    elseif arg == '-j' then json = true
-    end
-end
 
 local config = {}
 
@@ -51,10 +42,10 @@ config.unit = {
     applications = {
         lor = {
             type              = 'external',
-            executable        = 'app/unit.lua',
+            executable        = 'app/main.lua',
             working_directory = pwd,
             arguments         = {'@' .. cfg_file},
-            processes         = 1,
+            processes         = 2,
         },
     },
     routes = {
@@ -75,15 +66,5 @@ config.unit = {
         },
     },
 }
-
-config = config[typ] or config
-
-if json then
-    local cj = require 'cjson'
-    config = cj.encode(config)
-    -- NOTE hsq unit 收到配置字串会自动过滤
-    -- config = config:gsub('\\/', '/')
-    print(config)
-end
 
 return config

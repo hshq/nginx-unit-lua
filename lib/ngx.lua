@@ -9,7 +9,11 @@ local pairs      = pairs
 local ipairs     = ipairs
 local tonumber   = tonumber
 local tostring   = tostring
-local tointeger  = math.tointeger
+local floor      = math.floor
+local tointeger  = math.tointeger or function(num)
+    local int = floor(num)
+    return int == num and int or nil
+end
 local upper      = string.upper
 local char       = string.char
 local log_err    = unit.err

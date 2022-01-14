@@ -3,7 +3,9 @@ local _M
 local join = table.concat
 local push = table.insert
 
--- TODO hsq 重复的函数定义。
+local unpack = table.unpack or _G.unpack
+
+-- TODO hsq 重复定义。
 local function map(tbl, func)
     for k, v in pairs(tbl) do
         tbl[k] = func(v)
@@ -24,6 +26,15 @@ local function merge(dst, src)
     end
     return dst
 end
+
+local function readonly(tbl)
+    return setmetatable(tbl, {
+        __newindex = function(t, k, v)
+            error('readonly', 2)
+        end,
+    })
+end
+
 
 local function cmd(array)
     return table.concat(array, ' ')
@@ -48,11 +59,22 @@ local function lib(name)
     return '-l' .. name
 end
 
+
+local function is_jit()
+    return (_VERSION == 'Lua 5.1' and _G.jit) and true or false
+end
+
 local function gen(config)
     local config = _M.env(config)
 
     -- TODO hsq 必须在库目录中执行。
-    config = assert(loadfile('../make.inc.lua', 'bt', config))()
+    local inc_file = '../make.inc.lua'
+    if is_jit() then
+        _G._ENV = config
+        config = assert(loadfile(inc_file))()
+    else
+        config = assert(loadfile(inc_file, 'bt', config))()
+    end
 
     local mk = {}
 
@@ -97,40 +119,36 @@ local function env(tbl)
                 end
                 push(fs, v)
             end
-            return table.unpack(fs)
+            return unpack(fs)
         end,
     })
 end
 
 _M = {
-    -- NOTE hsq Makefile
-    -- http://c.biancheng.net/makefile/
-    -- linux make makefile 内置变量 默认变量
-    --  https://blog.csdn.net/whatday/article/details/104079644
-    -- makefile 分析 -- 内置变量及自动变量
-    --  https://blog.csdn.net/hejinjing_tom_com/article/details/40781787
     CC       = 'gcc',
     MAKE     = 'make', -- '$(MAKE)'
-    INC_DIRS = {},
-    LD_DIRS  = {},
+    INC_DIRS = readonly({}),
+    LD_DIRS  = readonly({}),
     DBG_OPTS = '',
     CFLAGS   = '',
     LDFLAGS  = '',
-    LIBS     = {},
+    LIBS     = readonly({}),
     MK_FILE  = './Makefile',
 
-    join  = join,
-    push  = push,
-    map   = map,
-    merge = merge,
+    join     = join,
+    push     = push,
+    map      = map,
+    merge    = merge,
+    readonly = readonly,
+    is_jit   = is_jit,
 
     cmd  = cmd,
     sh   = sh,
-    gen  = gen,
     I    = I,
     L    = L,
     lib  = lib,
 
+    gen  = gen,
     env  = env,
 }
 

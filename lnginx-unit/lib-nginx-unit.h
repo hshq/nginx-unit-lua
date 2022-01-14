@@ -1,6 +1,11 @@
+#ifndef LIB_NGINX_UNIT_H
+#define LIB_NGINX_UNIT_H
+
 #include <luaconf.h>
 #include <lua.h>
 #include <nxt_unit_request.h>
+
+#include "../deps/adapter.h"
 
 LUAMOD_API int luaopen_unit_core(lua_State *);
 
@@ -19,3 +24,5 @@ LUAMOD_API int ctx_mtd_info(lua_State *);
 LUAMOD_API int ctx_mtd_debug(lua_State *);
 
 void request_handler(nxt_unit_request_info_t *);
+
+#endif // LIB_NGINX_UNIT_H
