@@ -1,5 +1,7 @@
 #!/usr/bin/env lua5.4
 
+local USE_JIT = true
+
 local cfg_name = 'config.lor'
 local cfg_file = 'conf/' .. cfg_name .. '.lua'
 
@@ -48,8 +50,8 @@ config.unit = {
             -- executable        = 'app/main.lua',
             -- arguments         = {'@' .. cfg_file},
 
-            -- executable        = '/usr/local/bin/lua',
-            executable        = '/usr/local/bin/luajit',
+            executable        = USE_JIT and '/usr/local/bin/luajit' or
+                                            '/usr/local/bin/lua',
             arguments         = {'app/main.lua', '@' .. cfg_file},
         },
     },
