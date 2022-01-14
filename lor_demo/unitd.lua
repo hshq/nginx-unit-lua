@@ -71,6 +71,7 @@ function funcs.save()
 end
 
 function funcs.config()
+    funcs.save()
     local cmd = join({
         'curl -s -X PUT \\',
         '   --data-binary \'%s\' \\',

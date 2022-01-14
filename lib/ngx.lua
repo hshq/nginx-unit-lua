@@ -259,13 +259,14 @@ local function make_ngx(cfg, req)
                 resp_headers[k] = nil
                 return
             end
-            local v0 = resp_headers[k]
+            -- NOTE hsq 调用方确保提供正确的类型，构造好再简单赋值
+            -- TODO hsq 根据是否多项，在首次赋值前构造正确的类型？
+            -- local v0 = resp_headers[k]
             if type(v) == 'table' then
                 map(map(v, tostring), escape_v)
             else
                 v = escape_v(tostring(v))
             end
-            -- NOTE hsq 调用方确保提供正确的类型，构造好再简单赋值
             resp_headers[k] = v
         end,
     })

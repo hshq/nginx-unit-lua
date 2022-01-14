@@ -42,10 +42,15 @@ config.unit = {
     applications = {
         lor = {
             type              = 'external',
-            executable        = 'app/main.lua',
-            working_directory = pwd,
-            arguments         = {'@' .. cfg_file},
             processes         = 2,
+            working_directory = pwd,
+
+            -- executable        = 'app/main.lua',
+            -- arguments         = {'@' .. cfg_file},
+
+            -- executable        = '/usr/local/bin/lua',
+            executable        = '/usr/local/bin/luajit',
+            arguments         = {'app/main.lua', '@' .. cfg_file},
         },
     },
     routes = {

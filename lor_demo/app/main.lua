@@ -1,5 +1,4 @@
 #!/usr/bin/env lua5.4
--- TODO hsq LuaJIT 和 Lua5.4 同时可用
 
 -- 配置可以来自 LUA_INIT_5_4(5.4)/LUA_INIT(5.4&jit) 或 unitd 配置参数，后者用法同前者。
 --  前者必须设置全局变量 unit_config ，后者则支持全局变量 unit_config 和返回配置表。
@@ -58,6 +57,12 @@ local function request_handler(req)
 
     local app = require('app.server')
     app:run()
+
+    -- X-Powered-By 添加 Lua 版本信息
+    local ver = _G.jit and (_G.jit.version:match('^(.-)%-')) or _VERSION
+    local xpb = ngx.header.x_powered_by
+    xpb = xpb and (xpb .. ' on ' .. ver) or ver
+    ngx.header.x_powered_by = xpb
 
     return status, ngx.get_response_content(), ngx.get_response_headers()
 end
