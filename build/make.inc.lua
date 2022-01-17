@@ -72,7 +72,7 @@ local CFLAGS  = cmd{CFLAGS, '$(INC_DIRS)', '$(C_WARNS)', '$(COPTS)', '-std=c99 -
 -- local LIBS    = cmd{LIBS, LUA_LIB}
 local LDFLAGS = cmd{LDFLAGS, OS_LDFLAGS[OS]}
 
-local LIB_FILE = ('../lib/%s/%s.%s'):format(LUA_VER, LIB_NAME, LIB_EXT)
+local LIB_FILE = ('../../lib/%s/%s.%s'):format(LUA_VER, LIB_NAME, LIB_EXT)
 
 local vars = {
     {'LUA_VER',  LUA_VER},

@@ -26,7 +26,9 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 
 2.  ```mkdir -p lib/5.1/lnginx-unit lib/5.4/lnginx-unit```
 
-3.  在 deps/ 中解压 [https://github.com/aklomp/base64](base64) 源码包，
+3.  进入 build/ 目录。
+
+4.  在 deps/ 中解压 [https://github.com/aklomp/base64](base64) 源码包，
     1. 修改 ./Makefile ，注释掉目标 lib/libbase64.o 下的 $(OBJCOPY) 指令，
         - （ MacOS 中会导致编译失败、运行失败，找不到符号。）
     2. intel 平台执行命令（生成文件 lib/libbase64.o, lib/config.h ）：
@@ -40,7 +42,7 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
         ```
     3. ```(cd test; make test) # 执行 test 和 benchmark```
 
-4.  进入 lbase64/ 目录：
+5.  进入 lbase64/ 目录：
     ```
     # 根据 make.lua, ../make.lua, ../make.inc.lua 生成 Lua5.4 对应的 Makefile
     ./make.lua
@@ -51,7 +53,7 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
     # make clean
     ```
 
-5.  lnginx-unit 同上一步。
+6.  lnginx-unit/ 同上一步。
 
 #### 使用说明
 

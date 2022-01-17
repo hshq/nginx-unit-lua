@@ -19,7 +19,7 @@ package.cpath = table.concat({
 package.path =  table.concat({
     pwd .. './app/?.lua',
     pwd .. './?.lua',
-    env .. '/lor/?.lua',
+    env .. '/lib/lor/?.lua',
     env .. '/lib/'..ver..'/?.lua',
     env .. '/lib/?.lua',
     package.path,
