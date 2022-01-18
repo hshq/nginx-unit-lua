@@ -11,7 +11,14 @@ local push         = table.insert
 local pop          = table.remove
 local join         = table.concat
 local io_popen     = io.popen
+local io_open      = io.open
 
+
+local function write_file(file, content)
+    local f = assert(io_open(file, 'w'))
+    f:write(content)
+    assert(f:close())
+end
 
 local function sh(cmd)
     local f = assert(io_popen(cmd, 'r'))
@@ -103,7 +110,8 @@ end
 local _M = {
     init  = init,
 
-    sh = sh,
+    sh         = sh,
+    write_file = write_file,
 
     push     = push,
     pop      = pop,

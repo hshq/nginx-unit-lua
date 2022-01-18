@@ -42,18 +42,13 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
         ```
     3. ```(cd test; make test) # 执行 test 和 benchmark```
 
-5.  进入 lbase64/ 目录：
-    ```
-    # 根据 make.lua, ../make.lua, ../make.inc.lua 生成 Lua5.4 对应的 Makefile
+5.  ```
+    # 针对 Lua5.4 生成 ./Makefile 及各共享库的 Makefile
+    # luajit make.lua
     ./make.lua
     make
     make clean
-    # luajit make.lua
-    # make
-    # make clean
     ```
-
-6.  lnginx-unit/ 同上一步。
 
 #### 使用说明
 

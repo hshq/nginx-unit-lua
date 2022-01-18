@@ -9,6 +9,7 @@ package.path =  table.concat({
 local base = require 'utils.base'
 local sh = base.sh
 local join = base.join
+local write_file = base.write_file
 
 local CFG_FILE = 'conf/config.lor.json'
 local CFG_LUA = 'conf/config.lor.lua'
@@ -71,9 +72,7 @@ function funcs.restart()
 end
 
 function funcs.save()
-    local f = assert(io.open(CFG_FILE, 'w'))
-    assert(f:write(prettify))
-    assert(f:close())
+    write_file(CFG_FILE, prettify)
 end
 
 function funcs.config()

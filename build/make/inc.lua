@@ -113,7 +113,7 @@ local rules = {{
         },
     },{
         target = cmd(O_FILES), -- '$(O_FILES)'
-        deps = {'make.lua', '../make.inc.lua', '../make.lua'},
+        deps = {'../make/lib.lua', '../make/inc.lua', '../make.lua'},
     },{
         target = 'clean',
         actions = {

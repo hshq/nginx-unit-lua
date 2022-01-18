@@ -1,6 +1,4 @@
-#!/usr/bin/env lua5.4
-
-(dofile '../make.lua').gen {
+return {
     LIB_NAME = 'lnginx-unit/core',
     DEP_OBJS = {'/usr/local/lib/libunit.a'},
     O_FILES  = {'lib-nginx-unit.o', '../deps/adapter.o'},
