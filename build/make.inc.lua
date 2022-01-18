@@ -1,13 +1,28 @@
 -- NOTE hsq 参考 lpeg 库
 
 -- NOTE hsq 只是为了避免语言服务器警告
-local join, push, map, merge, cmd = _ENV('join, push, map, merge, cmd')
-local I, L, lib, sh               = _ENV('I, L, lib, sh')
+-- TODO hsq 推广这种导入方法？ use(mod, '...') use'...' of 'mod'
+-- local join, push, map, merge, cmd = _ENV('join, push, map, merge, cmd')
+local I, L, lib, sh, cmd          = _ENV('I, L, lib, sh, cmd')
 local INC_DIRS, LD_DIRS, LIBS     = _ENV('INC_DIRS, LD_DIRS, LIBS')
 local CFLAGS, LDFLAGS, DBG_OPTS   = _ENV('CFLAGS, LDFLAGS, DBG_OPTS')
 local DEP_OBJS, O_FILES           = _ENV('DEP_OBJS, O_FILES')
 local LIB_NAME, MK_FILE, CC, MAKE = _ENV('LIB_NAME, MK_FILE, CC, MAKE')
-local is_jit = _ENV('is_jit')
+-- TODO hsq 搜索 is_jit jit 和 _ENV
+-- local is_jit = _ENV('is_jit')
+
+package.path =  table.concat({
+    -- '../lib/'..ver..'/?.lua',
+    '../lib/?.lua',
+    package.path,
+}, ';')
+
+local base = require 'utils_base'
+local join = base.join
+local push = base.push
+local map  = base.map
+local merge = base.merge
+local is_jit = base.is_jit
 
 local DEBUG = true
 local COPTS = {

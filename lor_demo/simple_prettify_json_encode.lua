@@ -5,15 +5,24 @@ local COMPACT = 0
 local INDENT  = 4
 local PADDING = ' '
 
+-- TODO hsq 麻烦？
+package.path =  table.concat({
+    -- '../lib/'..ver..'/?.lua',
+    '../lib/?.lua',
+    package.path,
+}, ';')
+
+local base = require 'utils_base'
+local push = base.push
+local pop  = base.pop
+local join = base.join
+
 
 local type   = type
 local next   = next
 local pairs  = pairs
 local ipairs = ipairs
 local assert = assert
-local push   = table.insert
-local pop    = table.remove
-local join   = table.concat
 local fmt    = string.format
 
 

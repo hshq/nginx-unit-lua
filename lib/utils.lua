@@ -1,15 +1,18 @@
-local utils = require 'utils_base'
-utils.init()
--- utils.init= nil
-local merge = utils.merge
+local base = require 'utils_base'
+base.init()
+-- base.init= nil
+local merge = base.merge
 
-merge(utils, require 'utils_ffi')
+local _M = {}
+
+merge(_M, base)
+merge(_M, require 'utils_ffi')
 
 local b64 = require 'lbase64'
 -- NOTE hsq auto 可能使用 neon32/neon64 导致编解码失败。
 b64.set_codec(b64.codec.avx2)
-utils.encode_base64 = b64.encode
-utils.decode_base64 = b64.decode
+_M.encode_base64 = b64.encode
+_M.decode_base64 = b64.decode
 
 
 local type     = type
@@ -17,7 +20,7 @@ local pairs    = pairs
 local ipairs   = ipairs
 local tonumber = tonumber
 local char     = string.char
-local push     = utils.insert
+local push     = base.push
 
 
 local function unescape(str)
@@ -53,8 +56,7 @@ local function parseQuery(query, max_args)
     return args
 end
 
-merge(utils, {
-    parseQuery = parseQuery,
-})
 
-return utils
+_M.parseQuery = parseQuery
+
+return _M

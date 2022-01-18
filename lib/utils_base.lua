@@ -1,12 +1,25 @@
 -- XXX 放在系统路径中
 -- XXX 加载后，在字符串元表中注册了一些方法
 
+local api = require 'utils_adapter'
+-- TODO hsq 改结构为 utils.XX
+
 local type         = type
 local pairs        = pairs
+local assert       = assert
 local getmetatable = getmetatable
 local push         = table.insert
 local pop          = table.remove
 local join         = table.concat
+local io_popen     = io.popen
+
+
+local function sh(cmd)
+    local f = assert(io_popen(cmd, 'r'))
+    local r = assert(f:read('*a'))
+    f:close()
+    return r
+end
 
 
 local function clear(tbl)
@@ -22,10 +35,32 @@ local function map(tbl, func)
     return tbl
 end
 
+-- TODO hsq extend 代替 merge ？
+-- 数组部分追加，散列部分覆盖。
 local function merge(dst, src)
-    for k, v in pairs(src) do
-        dst[k] = v
+    -- for k, v in pairs(src) do
+    --     dst[k] = v
+    -- end
+    -- return dst
+    for i, v in ipairs(src) do
+        push(dst, v)
     end
+    local k, v = #src
+    k = k ~= 0 and k or nil
+    k, v = next(src, k)
+    while(k) do
+        dst[k] = v
+        k, v = next(src, k)
+    end
+    return dst
+end
+
+local function readonly(tbl)
+    return setmetatable(tbl, {
+        __newindex = function(t, k, v)
+            error('readonly', 2)
+        end,
+    })
 end
 
 
@@ -66,14 +101,20 @@ local function init(tz)
 end
 
 
-return {
+local _M = {
     init  = init,
 
-    push  = push,
-    pop   = pop,
-    join  = join,
-    clear = clear,
-    map   = map,
-    merge = merge,
+    sh = sh,
+
+    push     = push,
+    pop      = pop,
+    join     = join,
+    clear    = clear,
+    map      = map,
+    merge    = merge,
+    readonly = readonly,
+
     split = split,
 }
+
+return merge(_M, api)

@@ -1,10 +1,21 @@
 #!/usr/bin/env lua5.4
 
+package.path =  table.concat({
+    -- '../lib/'..ver..'/?.lua',
+    '../lib/?.lua',
+    package.path,
+}, ';')
+
+local base = require 'utils_base'
+local sh = base.sh
+local join = base.join
+
 local CFG_FILE = 'conf/config.lor.json'
 local CFG_LUA = 'conf/config.lor.lua'
 
 -- TODO hsq 共享 app/main.lua 中的配置处理代码
 -- TODO hsq 生成 Makefile ，依赖 config.lor.lua 和 本文件？
+-- TODO hsq 制作全局 start/stop/restart 或类似命令，调用当前目录中的对应功能？
 local config = assert(loadfile(CFG_LUA))()
 
 local unit = require 'lnginx-unit'
@@ -15,7 +26,6 @@ local SOCK = unit.DEFAULT_CONFIG.CONTROL_SOCK:match('^.-:?([^:]+)$')
 local HOST, PORT = next(config.unit.listeners):match('(.+):(.+)')
 HOST = HOST == '*' and 'localhost' or HOST
 
-local join = table.concat
 
 local prettify = (require 'simple_prettify_json_encode'){
     val = config.unit,
@@ -27,14 +37,10 @@ config = config:gsub('\\/', '/')
 
 -- local CFG = `./$(CFG_LUA) -j -u`
 
--- TODO hsq 重复定义
-local function sh(cmd)
+local function echo_sh(cmd)
     print(cmd)
-    local f = assert(io.popen(cmd, 'r'))
-    local r = assert(f:read('*a'))
+    local r = sh(cmd)
     print(r)
-    f:close()
-    -- return r
 end
 
 local funcs = {}
@@ -46,17 +52,17 @@ function funcs.help()
     print('SOCK:', SOCK)
     print('STATE:', unit.DEFAULT_CONFIG.STATE)
     print('UNIT-CONF:')
-    sh('cat '..unit.DEFAULT_CONFIG.STATE..'/conf.json')
+    echo_sh('cat '..unit.DEFAULT_CONFIG.STATE..'/conf.json')
     -- print('CONFIG:', config)
     print('CONFIG:',    prettify)
 end
 
 function funcs.start()
-    sh('unitd')
+    echo_sh('unitd')
 end
 
 function funcs.stop()
-    sh('pkill unitd')
+    echo_sh('pkill unitd')
 end
 
 function funcs.restart()
@@ -80,11 +86,11 @@ function funcs.config()
     }, '\n')
     config = '@' .. CFG_FILE
     cmd = cmd:format(config, SOCK, HOST, PORT)
-    sh(cmd)
+    echo_sh(cmd)
 end
 
 function funcs.get()
-    sh(('curl -s "http://%s:%s/"'):format(HOST, PORT))
+    echo_sh(('curl -s "http://%s:%s/"'):format(HOST, PORT))
 end
 
 local func = ... or 'help'
