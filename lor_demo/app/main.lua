@@ -40,7 +40,6 @@ local make_ngx = require 'ngx'
 --     unit = unit,
 -- })
 
-
 local FAILED = 'Failed!\n'
 
 local function check(ret, rc, err)
@@ -61,7 +60,8 @@ local function request_handler(req)
     -- X-Powered-By 添加 Lua 版本信息
     local ver = _G.jit and (_G.jit.version:match('^(.-)%-')) or _VERSION
     local xpb = ngx.header.x_powered_by
-    xpb = xpb and (xpb .. ' on ' .. ver) or ver
+    -- xpb = xpb and (xpb .. ' on ' .. ver) or ver
+    xpb = xpb and {xpb, ver} or ver
     ngx.header.x_powered_by = xpb
 
     return status, ngx.get_response_content(), ngx.get_response_headers()

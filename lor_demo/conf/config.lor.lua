@@ -1,6 +1,9 @@
 #!/usr/bin/env lua5.4
 
 local USE_JIT = true
+if _G.USE_JIT ~= nil then
+    USE_JIT = _G.USE_JIT
+end
 
 local cfg_name = 'config.lor'
 local cfg_file = 'conf/' .. cfg_name .. '.lua'
