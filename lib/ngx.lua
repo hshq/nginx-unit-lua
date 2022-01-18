@@ -39,7 +39,7 @@ local LAST_MODIFIED_FMT = '!%a, %d %b %Y %T GMT'
 
 local MAX_ARGS = 100
 
-local LOG_LEVEL = { [0] = 'STDERR',
+local NGX_LOG_LEVEL = { [0] = 'STDERR',
     'EMERG', 'ALERT', 'CRIT', 'ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG',
 }
 
@@ -70,15 +70,15 @@ local char2escape_v = char2escape(escape_charset.V)
 local ngx_proto = {}
 
 local logs = {}
-for level, name in pairs(LOG_LEVEL) do
+for level, name in pairs(NGX_LOG_LEVEL) do
     ngx_proto[name] = level
-    logs[level] = unit[name] or unit.alert
+    logs[level] = unit[name:lower()] or unit.alert
 end
 
 ngx_proto.null = null
 
 ngx_proto.log = function(level, ...)
-    local name = LOG_LEVEL[level]
+    local name = NGX_LOG_LEVEL[level]
     local args = {...}
     for i, arg in ipairs(args) do
         args[i] = arg == null and 'null' or tostring(arg)

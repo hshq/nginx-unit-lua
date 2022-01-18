@@ -17,7 +17,6 @@ local CFG_LUA  = 'conf/config.lor.lua'
 
 -- TODO hsq 共享 app/main.lua 中的配置处理代码
 -- TODO hsq 生成 Makefile ，依赖 config.lor.lua 和 本文件？
--- TODO hsq 制作全局 start/stop/restart 或类似命令，调用当前目录中的对应功能？
 local func = ... or 'help'
 local args = {select(2, ...)}
 _G.USE_JIT = is_jit()
@@ -96,4 +95,4 @@ function funcs.get()
     echo_sh(('curl -s "http://%s:%s/"'):format(HOST, PORT))
 end
 
-funcs[func](args)
+assert(funcs[func], 'invalid func: ' .. func)(args)
