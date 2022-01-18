@@ -1,8 +1,7 @@
 #!/usr/bin/env lua5.4
 
-package.path =  table.concat({
+package.path = table.concat({
     -- '../lib/'..ver..'/?.lua',
-    -- TODO hsq 自动配置路径，如系统路径、完整路径、自动搜索等。
     '../lib/?.lua',
     package.path,
 }, ';')

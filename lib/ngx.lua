@@ -261,6 +261,7 @@ local function make_ngx(cfg, req)
             end
             -- NOTE hsq 调用方确保提供正确的类型，构造好再简单赋值
             -- TODO hsq 根据是否多项，在首次赋值前构造正确的类型？
+            -- TODO hsq 多值可以分开传输，也可以(先各自转义再)合并(，并用逗号分隔)。
             -- local v0 = resp_headers[k]
             if type(v) == 'table' then
                 map(map(v, tostring), escape_v)

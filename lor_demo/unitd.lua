@@ -1,6 +1,6 @@
 #!/usr/bin/env lua5.4
 
-package.path =  table.concat({
+package.path = table.concat({
     -- '../lib/'..ver..'/?.lua',
     '../lib/?.lua',
     package.path,
@@ -32,7 +32,7 @@ local HOST, PORT = next(config.unit.listeners):match('(.+):(.+)')
 HOST = HOST == '*' and 'localhost' or HOST
 
 
-local prettify = (require 'simple_prettify_json_encode'){
+local prettify = (require 'prettify_json'){
     val = config.unit,
     COMPACT = 2,
 }

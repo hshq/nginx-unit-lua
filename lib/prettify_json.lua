@@ -6,7 +6,8 @@ local INDENT  = 4
 local PADDING = ' '
 
 -- TODO hsq 麻烦？
-package.path =  table.concat({
+-- TODO hsq 自动配置路径，如系统路径、完整路径、自动搜索等。
+package.path = table.concat({
     -- '../lib/'..ver..'/?.lua',
     '../lib/?.lua',
     package.path,

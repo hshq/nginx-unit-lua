@@ -11,7 +11,7 @@ local LIB_NAME, MK_FILE, CC, MAKE = _ENV('LIB_NAME, MK_FILE, CC, MAKE')
 -- TODO hsq 搜索 is_jit jit 和 _ENV
 -- local is_jit = _ENV('is_jit')
 
-package.path =  table.concat({
+package.path = table.concat({
     -- '../lib/'..ver..'/?.lua',
     '../lib/?.lua',
     package.path,
