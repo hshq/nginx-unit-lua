@@ -10,7 +10,7 @@ Nginx-Unit 的 Lua5.4/LuaJIT 支持。
 
 #### 软件架构
 Lua 并非像 Unit 官方支持的那些语言一样集成到 Unit 中，
-而是外部应用的形式（配置类型为 external ）。
+而是外部应用的形式（配置类型为 `external` ）。
 
 Unit 启动时（或者应用配置变更时），根据配置启动 Lua 应用进程，
 通过已经编译为 Lua 共享库的 Unit 通信模块交互。
@@ -21,24 +21,25 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 #### 安装教程
 
 1.  依赖：
-    - [https://github.com/openresty/lua-cjson](lua-cjson)
-    - [https://github.com/facebookarchive/luaffifb](LuaFFI)
+    - [lua-cjson](https://github.com/openresty/lua-cjson)
+    - [LuaFFI](https://github.com/facebookarchive/luaffifb)
+    - [base64](https://github.com/aklomp/base64)
 
 2.  ```mkdir -p lib/5.1/lnginx-unit lib/5.4/lnginx-unit```
 
-3.  进入 build/ 目录。
+3.  进入 `build/` 目录。
 
-4.  在 deps/ 中解压 [https://github.com/aklomp/base64](base64) 源码包，
-    1. 修改 ./Makefile ，注释掉目标 lib/libbase64.o 下的 $(OBJCOPY) 指令，
+4.  在 `deps/` 中解压 [base64](https://github.com/aklomp/base64) 源码包，
+    1. `MacOS`: 修改 `./Makefile` ，注释掉目标 `lib/libbase64.o` 下的 `$(OBJCOPY)` 指令，
         - （ MacOS 中会导致编译失败、运行失败，找不到符号。）
-    2. intel 平台执行命令（生成文件 lib/libbase64.o, lib/config.h ）：
+    2. intel 平台执行命令（生成文件 `lib/libbase64.o`, `lib/config.h` ）：
         ```
         SSSE3_CFLAGS=-mssse3 \
         SSE41_CFLAGS=-msse4.1 \
         SSE42_CFLAGS=-msse4.2 \
         AVX2_CFLAGS=-mavx2 \
         AVX_CFLAGS=-mavx \
-        make lib/libbase64.o
+            make lib/libbase64.o
         ```
     3. ```(cd test; make test) # 执行 test 和 benchmark```
 
@@ -52,7 +53,7 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 
 #### 使用说明
 
-1.  进入 lor_demo/ 目录：
+1.  进入 `lor_demo/` 目录：
     ```
     # 如用 luajit 执行脚本，生成的配置启动 luajit 。
     ./unitd.lua # 查看配置， demo 的 Unit 配置在 CONF-FILE
