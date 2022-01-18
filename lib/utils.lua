@@ -1,4 +1,4 @@
-local base = require 'utils_base'
+local base = require 'utils.base'
 base.init()
 -- base.init= nil
 local merge = base.merge
@@ -6,7 +6,7 @@ local merge = base.merge
 local _M = {}
 
 merge(_M, base)
-merge(_M, require 'utils_ffi')
+merge(_M, require 'utils.ffi')
 
 local b64 = require 'lbase64'
 -- NOTE hsq auto 可能使用 neon32/neon64 导致编解码失败。

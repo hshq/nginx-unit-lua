@@ -6,7 +6,7 @@ package.path =  table.concat({
     package.path,
 }, ';')
 
-local base = require 'utils_base'
+local base = require 'utils.base'
 local sh = base.sh
 local join = base.join
 
