@@ -52,9 +52,8 @@ end
 
 
 local function request_handler(req)
-    req = readonly(req)
-
     -- unit.debug((require 'inspect')(req))
+    req = readonly(req)
 
     local ngx = make_ngx(web_config, req)
     _G.ngx = ngx

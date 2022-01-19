@@ -563,7 +563,7 @@ local function make_ngx(cfg, req)
                 t.ctx = {}
                 return t.ctx
             end
-            log_err('未实现 < =ngx.%s >', k)
+            log_err('未实现 < ... = ngx.%s >', k)
             return nil
         end,
         __newindex = function(t, k, v)
@@ -576,7 +576,7 @@ local function make_ngx(cfg, req)
                 end
                 return
             end
-            log_err('未实现 < ngx.%s= >', k)
+            log_err('未实现 < ngx.%s = ... >', k)
         end,
     })
 end
