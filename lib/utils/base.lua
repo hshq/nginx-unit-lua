@@ -34,11 +34,29 @@ local function clear(tbl)
     end
 end
 
-local function map(tbl, func)
-    for k, v in pairs(tbl) do
-        tbl[k] = func(v)
+local function map(tbl, func_v, func_k)
+    if func_k then
+        for k, v in pairs(tbl) do
+            tbl[func_k(k)] = func_v(v)
+        end
+    else
+        for k, v in pairs(tbl) do
+            tbl[k] = func_v(v)
+        end
     end
     return tbl
+end
+
+local function clone(tbl, depth)
+    local tbl2 = {}
+    for k, v in pairs(tbl) do
+        if (not depth or depth > 0) and type(v) == 'table' then
+            tbl2[k] = clone(v, depth and depth - 1)
+        else
+            tbl2[k] = v
+        end
+    end
+    return tbl2
 end
 
 -- TODO hsq extend 代替 merge ？
@@ -116,8 +134,10 @@ local _M = {
     push     = push,
     pop      = pop,
     join     = join,
+
     clear    = clear,
     map      = map,
+    clone    = clone,
     merge    = merge,
     readonly = readonly,
 

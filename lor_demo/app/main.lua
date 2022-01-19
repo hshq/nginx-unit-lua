@@ -34,6 +34,9 @@ local web_config = assert(unit_config and unit_config.web, 'invalid config')
 
 local unit     = require 'lnginx-unit'
 local make_ngx = require 'ngx'
+local utils    = require 'utils'
+
+local readonly = utils.readonly
 
 -- unit.debug((require 'inspect'){
 --     unit_config = unit_config,
@@ -49,13 +52,21 @@ end
 
 
 local function request_handler(req)
-    local status = 200
+    req = readonly(req)
+
+    -- unit.debug((require 'inspect')(req))
 
     local ngx = make_ngx(web_config, req)
     _G.ngx = ngx
 
     local app = require('app.server')
     app:run()
+
+    unit.debug((require 'inspect')(ngx.location.capture(
+        '/hello?a=b', {
+            args = {a='c',b='d',e={1,2,3}}
+        }
+    )))
 
     -- X-Powered-By 添加 Lua 版本信息
     local ver = _G.jit and (_G.jit.version:match('^(.-)%-')) or _VERSION
@@ -64,7 +75,7 @@ local function request_handler(req)
     xpb = xpb and {xpb, ver} or ver
     ngx.header.x_powered_by = xpb
 
-    return status, ngx.get_response_content(), ngx.get_response_headers()
+    return ngx.status, ngx.get_response_content(), ngx.get_response_headers()
 end
 
 local ctx = check(unit.init(request_handler))
