@@ -57,9 +57,9 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 1.  ```
     cd lor_demo
     # 如用 luajit 执行脚本，生成的配置启动 luajit 。
-    ./unitd.lua # 查看配置， demo 的 Unit 配置在 CONF-FILE
-    ./unitd.lua save # 生成并存储 json 格式的配置到文件
-    ./unitd.lua start # 启动 Unit 服务器， stop/restart
+    ./unitd.lua        # 查看配置， demo 的 Unit 配置在 CONF-FILE
+    ./unitd.lua save   # 生成并存储 json 格式的配置到文件
+    ./unitd.lua start  # 启动 Unit 服务器， stop/restart
     ./unitd.lua config # save 然后推送配置到 Unit
     ```
 

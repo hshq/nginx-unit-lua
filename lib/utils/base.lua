@@ -51,7 +51,7 @@ local function merge(dst, src)
     for i, v in ipairs(src) do
         push(dst, v)
     end
-    local k, v = #src
+    local k, v = #src, nil
     k = k ~= 0 and k or nil
     k, v = next(src, k)
     while(k) do
