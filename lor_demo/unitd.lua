@@ -1,7 +1,6 @@
 #!/usr/bin/env lua5.4
 
 package.path = table.concat({
-    -- '../lib/'..ver..'/?.lua',
     '../lib/?.lua',
     package.path,
 }, ';')
@@ -92,7 +91,10 @@ function funcs.config()
 end
 
 function funcs.get()
-    echo_sh(('curl -s "http://%s:%s/"'):format(HOST, PORT))
+    local path = '?desc=基于 Nginx/Unit 的 Lua 框架#'
+    -- echo_sh(('curl -s -H"cookie: a=b" "http://%s:%s/%s"'):format(HOST, PORT, path))
+    echo_sh(('curl -s -b"a=b" "http://%s:%s/%s"'):format(HOST, PORT, path))
+
 end
 
 assert(funcs[func], 'invalid func: ' .. func)(args)

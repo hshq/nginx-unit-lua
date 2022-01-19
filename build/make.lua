@@ -1,7 +1,6 @@
 #!/usr/bin/env lua5.4
 
 package.path = table.concat({
-    -- '../lib/'..ver..'/?.lua',
     '../lib/?.lua',
     package.path,
 }, ';')

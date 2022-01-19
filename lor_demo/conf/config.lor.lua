@@ -20,11 +20,10 @@ package.cpath = table.concat({
     package.cpath,
 }, ';')
 package.path = table.concat({
-    pwd .. './app/?.lua',
-    pwd .. './?.lua',
+    pwd .. '/app/?.lua',
     env .. '/lib/lor/?.lua',
-    env .. '/lib/'..ver..'/?.lua',
     env .. '/lib/?.lua',
+    -- env .. '/lib/'..ver..'/?.lua',
     package.path,
 }, ';')
 
@@ -39,11 +38,9 @@ config.web = {
 }
 
 config.unit = {
-    listeners = {
-        ['*:8888'] = {
-            pass = 'routes/lor',
-        },
-    },
+    -- TODO hsq 支持环境变量 LOR_ENV=env ？
+    -- TODO hsq 端口号来自 lib.lor.bin.scaffold.nginx.config ，生成 web 和运行都是。
+    listeners = { ['*:8888'] = { pass = 'routes/lor', },},
     applications = {
         lor = {
             type              = 'external',
@@ -53,29 +50,14 @@ config.unit = {
             -- executable        = 'app/main.lua',
             -- arguments         = {'@' .. cfg_file},
 
-            executable        = USE_JIT and '/usr/local/bin/luajit' or
-                                            '/usr/local/bin/lua',
-            arguments         = {'app/main.lua', '@' .. cfg_file},
-        },
-    },
+            executable = USE_JIT and '/usr/local/bin/luajit' or
+                                    '/usr/local/bin/lua',
+            arguments  = {'app/main.lua', '@' .. cfg_file},},},
     routes = {
         lor = {
-            {
-                match = {
-                    uri = '~^/(hello)?$',
-                },
-                action = {
-                    pass = 'applications/lor',
-                },
-            },
-            {
-                action = {
-                    share = 'app/static$uri',
-                },
-            },
-        },
-    },
-}
+            {   match = { uri = '~^/(hello)?$', },
+                action = { pass = 'applications/lor', },},
+            {   action = { share = 'app/static$uri', },},},},}
 
 _G.unit_config = config
 return config
