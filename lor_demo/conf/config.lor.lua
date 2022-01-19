@@ -33,7 +33,16 @@ config.web = {
     -- NOTE hsq nginx/openresty 命令的 -p 选项设定的值
     prefix = pwd,
     set_vars = {
-        template_root = '',
+        -- lua-resty-template
+        template_root     = '',
+        template_cache    = 'on', -- nil==true/'true'/'on'/'1',
+        -- 如设置则利用 ngx.location.capture 获取模版，否则从文件（获取失败也是）。
+        template_location = '',   -- nil==''
+        -- lua-resty-session/lua-resty-aes ，都应用缺省值
+        session_aes_size   = '',
+        session_aes_mode   = '',
+        session_aes_hash   = '',
+        session_aes_rounds = '',
     },
 }
 

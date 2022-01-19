@@ -105,7 +105,8 @@ ngx_proto.location = {}
 ngx_proto.location.capture = function(uri, options)
 end
 
--- @cfg: {prefix=, }
+-- TODO hsq ngx 需要拆分为基础部分和框架部分？
+-- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
 local function make_ngx(cfg, req)
     local ngx = {
         config = {
@@ -117,15 +118,10 @@ local function make_ngx(cfg, req)
         ngx[k] = v
     end
 
+    -- 临时用 resolved_vars
+    -- local resolved_vars = {
+    -- }
     -- http://nginx.org/en/docs/http/ngx_http_core_module.html#variables
-    local resolved_vars = {
-        template_cache = 1,
-        template_location = 1,
-        session_aes_size = 1,
-        session_aes_mode = 1,
-        session_aes_hash = 1,
-        session_aes_rounds = 1,
-    }
     local sys_vars = { -- 必须先定义。有字段，也可有数组部分。
         server_protocol = req.version,
         server_name     = req.server_name,
@@ -172,9 +168,9 @@ local function make_ngx(cfg, req)
                 h = req.field_refs[h]
                 return h and req.fields[h] or nil
             end
-            if resolved_vars[k] then
-                return nil
-            end
+            -- if resolved_vars[k] then
+            --     return nil
+            -- end
             return log_err('未定义变量 <ngx.var.%s>', k)
         end,
         __newindex = function (t, k, v)
