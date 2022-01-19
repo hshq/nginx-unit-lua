@@ -6,7 +6,8 @@ local c_log     = core.log
 local LOG_LEVEL = core.LOG_LEVEL
 local c_init    = core.init
 
-local type = type
+local type   = type
+local select = select
 
 local function check_level(level)
     local lv = level
@@ -24,7 +25,13 @@ end
 local function log(level, fmt, ...)
     local lv = check_level(level)
     if lv then
-        c_log(lv, fmt:format(...))
+        if select('#', ...) == 0 then
+            -- NOTE hsq fmt 中可能有 % 字符: bad argument #1 to 'format' (no value)
+            -- TODO hsq 以及 ngx.log
+            c_log(lv, fmt)
+        else
+            c_log(lv, fmt:format(...))
+        end
     end
 end
 
