@@ -12,14 +12,17 @@ local lib = require 'make.lib'
 -- local inc = require 'make.inc'
 local inc_file = './make/inc.lua'
 
+local ver = _VERSION:match('^Lua (.+)$')
+
 local libs = {
     'lbase64',
     'lnginx-unit',
 }
 
+local mk_order = {'all', 'clean'}
 local mk = {
-    all = {},
-    clean = {},
+    all   = { 'mkdir -p ../lib/' .. ver .. '/lnginx-unit' },
+    clean = { 'rm -f ' .. lib.MK_FILE },
 }
 
 for _, t in ipairs(libs) do
@@ -27,12 +30,11 @@ for _, t in ipairs(libs) do
     push(mk.all, '$(MAKE) -C ' .. t)
     push(mk.clean, '$(MAKE) -C ' .. t .. ' clean')
 end
-push(mk.clean, 'rm -f ' .. lib.MK_FILE)
 
 local mk2 = {}
-for t, ops in pairs(mk) do
+for _, t in ipairs(mk_order) do
     push(mk2, t .. ':')
-    for _, op in ipairs(ops) do
+    for _, op in ipairs(mk[t]) do
         push(mk2, '\t' .. op)
     end
     push(mk2, '')

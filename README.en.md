@@ -25,15 +25,14 @@ And several application processes, and various processes communicate with each o
     - [LuaFFI](https://github.com/facebookarchive/luaffifb)
     - [base64](https://github.com/aklomp/base64)
 
-2.  ```mkdir -p lib/5.1/lnginx-unit lib/5.4/lnginx-unit```
-
-3.  Enter the `build/` directory.
-
-4.  Unzip [base64](https://github.com/aklomp/base64) Source package in `deps/`,
-    1. `MacOS`: modify `./Makefile`, comment out the `$(OBJCOPY)` instruction under the target `lib/libbase64.o`,
+2.  Compile `base64` :
+    1. ``` cd build/deps ```
+        - Unzip [base64](https://github.com/aklomp/base64) Source package in `deps/`,
+        - `MacOS`: modify `./Makefile`, comment out the `$(OBJCOPY)` instruction under the target `lib/libbase64.o`,
         - (In MacOS, it will cause compilation failure, operation failure and symbol not found.)
-    2. Execute commands on Intel platform (generate files `lib/libbase64.o`, `lib/config.h`):
-        ```
+    2. ```
+        # Generate files lib/libbase64.o, lib/config.h
+        # x86
         SSSE3_CFLAGS=-mssse3 \
         SSE41_CFLAGS=-msse4.1 \
         SSE42_CFLAGS=-msse4.2 \
@@ -43,7 +42,9 @@ And several application processes, and various processes communicate with each o
         ```
     3. ```(cd test; make test) # Execute test and benchmark```
 
-5.  ```
+3.  Build `nginx-unit-lua` :
+    ```
+    cd ..
     # For lua5.4 generate ./Makefile and Makefile of each shared library
     # luajit make.lua
     ./make.lua
@@ -53,8 +54,8 @@ And several application processes, and various processes communicate with each o
 
 #### Instructions
 
-1.  Enter the `lor_demo/` directory:
-    ```
+1.  ```
+    cd lor_demo
     # If you execute the script with luajit, the generated configuration will start luajit.
     ./unitd.lua # View the configuration. The Unit configuration of the demo is in CONF-FILE
     ./unitd.lua save # Generate and store configuration files in JSON format

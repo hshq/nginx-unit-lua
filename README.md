@@ -25,15 +25,14 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
     - [LuaFFI](https://github.com/facebookarchive/luaffifb)
     - [base64](https://github.com/aklomp/base64)
 
-2.  ```mkdir -p lib/5.1/lnginx-unit lib/5.4/lnginx-unit```
-
-3.  进入 `build/` 目录。
-
-4.  在 `deps/` 中解压 [base64](https://github.com/aklomp/base64) 源码包，
-    1. `MacOS`: 修改 `./Makefile` ，注释掉目标 `lib/libbase64.o` 下的 `$(OBJCOPY)` 指令，
+2.  编译 `base64` ：
+    1. ``` cd build/deps ```
+        - 解压 [base64](https://github.com/aklomp/base64) 源码包，
+        - `MacOS`: 修改 `./Makefile` ，注释掉目标 `lib/libbase64.o` 下的 `$(OBJCOPY)` 指令，
         - （ MacOS 中会导致编译失败、运行失败，找不到符号。）
-    2. intel 平台执行命令（生成文件 `lib/libbase64.o`, `lib/config.h` ）：
-        ```
+    2. ```
+        # 生成文件 lib/libbase64.o, lib/config.h
+        # x86
         SSSE3_CFLAGS=-mssse3 \
         SSE41_CFLAGS=-msse4.1 \
         SSE42_CFLAGS=-msse4.2 \
@@ -43,7 +42,9 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
         ```
     3. ```(cd test; make test) # 执行 test 和 benchmark```
 
-5.  ```
+3.  构建 `nginx-unit-lua` ：
+    ```
+    cd ..
     # 针对 Lua5.4 生成 ./Makefile 及各共享库的 Makefile
     # luajit make.lua
     ./make.lua
@@ -53,8 +54,8 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 
 #### 使用说明
 
-1.  进入 `lor_demo/` 目录：
-    ```
+1.  ```
+    cd lor_demo
     # 如用 luajit 执行脚本，生成的配置启动 luajit 。
     ./unitd.lua # 查看配置， demo 的 Unit 配置在 CONF-FILE
     ./unitd.lua save # 生成并存储 json 格式的配置到文件
