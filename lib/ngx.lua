@@ -1,22 +1,25 @@
-local unit  = require 'lnginx-unit'
-local cjson = require 'cjson'
-local utils = require 'utils'
+local unit      = require 'lnginx-unit'
+local utils     = require 'utils'
+local ngx_const = require 'ngx.const'
+local ngx_proto = require 'ngx.proto'
 
-local type       = type
--- local os_time    = os.time
-local os_date    = os.date
-local pairs      = pairs
-local ipairs     = ipairs
-local tonumber   = tonumber
-local tostring   = tostring
-local floor      = math.floor
-local tointeger  = math.tointeger or function(num)
-    local int = floor(num)
-    return int == num and int or nil
-end
-local upper      = string.upper
-local char       = string.char
-local log_err    = unit.err
+local require      = require
+local setmetatable = setmetatable
+local type         = type
+local pairs        = pairs
+local ipairs       = ipairs
+local tostring     = tostring
+local tointeger    = math.tointeger
+
+local log_err = unit.err
+
+local cap_mtds_id2name    = ngx_const.cap_mtds_id2name
+local http_status_id2name = ngx_const.http_status_id2name
+local escape_k            = ngx_proto.escape_k
+local escape_v            = ngx_proto.escape_v
+local normalize_header    = ngx_proto.normalize_header
+local encode_args         = ngx_proto.encode_args
+
 local push       = utils.push
 local pop        = utils.pop
 local join       = utils.join
@@ -28,199 +31,37 @@ local readonly   = utils.readonly
 local parseQuery = utils.parseQuery
 local getpid     = utils.getpid
 -- local getpid     = unit.getpid
-local decode_base64 = utils.decode_base64
-local encode_base64 = utils.encode_base64
-
-local null = cjson.null
 
 
 local DEFAULT_ROOT = 'html'
 
--- NOTE hsq strftime
--- NOTE hsq https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Last-Modified
-local LAST_MODIFIED_FMT = '!%a, %d %b %Y %T GMT'
-
 local MAX_ARGS = 100
 
-local NGX_LOG_LEVEL = { [0] = 'STDERR',
-    'EMERG', 'ALERT', 'CRIT', 'ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG',
-}
-
 local NGX_HTTP_MAX_SUBREQUESTS = 50 -- 子请求嵌套上限
--- ngx.HTTP_XX
-local NGX_CAPTURE_METHOD = {
-    'GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'MKCOL', 'COPY', 'MOVE',
-    'OPTIONS', 'PROPFIND', 'PROPPATCH', 'LOCK', 'UNLOCK', 'PATCH', 'TRACE',
-}
-
--- ngx.HTTP_XX
-local NGX_HTTP_STATUS = {
-    CONTINUE               = 100,
-    SWITCHING_PROTOCOLS    = 101,
-    OK                     = 200,
-    CREATED                = 201,
-    ACCEPTED               = 202,
-    NO_CONTENT             = 204,
-    PARTIAL_CONTENT        = 206,
-    SPECIAL_RESPONSE       = 300,
-    MOVED_PERMANENTLY      = 301,
-    MOVED_TEMPORARILY      = 302,
-    SEE_OTHER              = 303,
-    NOT_MODIFIED           = 304,
-    TEMPORARY_REDIRECT     = 307,
-    PERMANENT_REDIRECT     = 308,
-    BAD_REQUEST            = 400,
-    UNAUTHORIZED           = 401,
-    PAYMENT_REQUIRED       = 402,
-    FORBIDDEN              = 403,
-    NOT_FOUND              = 404,
-    NOT_ALLOWED            = 405,
-    NOT_ACCEPTABLE         = 406,
-    REQUEST_TIMEOUT        = 408,
-    CONFLICT               = 409,
-    GONE                   = 410,
-    UPGRADE_REQUIRED       = 426,
-    TOO_MANY_REQUESTS      = 429,
-    CLOSE                  = 444,
-    ILLEGAL                = 451,
-    INTERNAL_SERVER_ERROR  = 500,
-    NOT_IMPLEMENTED        = 501,
-    METHOD_NOT_IMPLEMENTED = 501, -- (kept for compatibility)
-    BAD_GATEWAY            = 502,
-    SERVICE_UNAVAILABLE    = 503,
-    GATEWAY_TIMEOUT        = 504,
-    VERSION_NOT_SUPPORTED  = 505,
-    INSUFFICIENT_STORAGE   = 507,
-}
-
--- TODO hsq 代码太多，把一些无依赖的代码分离出去，比如子模块。
--- NOTE 转义字符范围，从 openresty 响应头实验中汇集。
-local escape_charset = {
-    [0] = '21,23-27,2A,2B,2D,2E,30-39,41-5A,5E-7A,7C,7E',   -- 都不转
-    [1] = '9,20,22,28-29,2C,2F,3A-40,5B-5D,7B,7D,80-FF',    -- 只 K 转
-    [2] = '0-8,A-1F,7F',                                    -- KV 都转
-    K   = '0-20,22,28-29,2C,2F,3A-40,5B-5D,7B,7D,7F-FF',    -- K 转
-    V   = '0-8,A-1F,7F',                                    -- V 转
-}
-local escape_charset_v = {}
-local function char2escape(charset)
-    local c2e = {}
-    charset:gsub('[^,]+', function(set)
-        local s, e = set:match('(%w+)%-?(%w*)')
-        s = tonumber(s, 16)
-        e = (e and e ~= '') and tonumber(e, 16) or s
-        for b = s, e do
-            c2e[char(b)] = ('%%%02X'):format(b)
-        end
-    end)
-    return c2e
-end
-local char2escape_k = char2escape(escape_charset.K)
-local char2escape_v = char2escape(escape_charset.V)
-
-local function normalize_header(name)
-    return name:lower():gsub('_', '-'):gsub('%f[%w]%w', upper)
-end
-local function flatten_header(name)
-    return name:lower():gsub('-', '_')
-end
-local function escape_k(k)
-    return (k:gsub('.', char2escape_k)) -- 只返回首值
-end
-local function escape_v(v)
-    return (tostring(v):gsub('.', char2escape_v)) -- 只返回首值
-end
-
--- @args table
--- return string
-local function encode_args(args)
-    assert(type(args) == 'table', 'Invalid parameter')
-    local buf = {}
-    for k, v in pairs(args) do
-        assert(type(k) == 'string', 'Invalid KEY type')
-        k = escape_k(k)
-        -- {k = true} -> k
-        -- {k = false} ->
-        if v == true then
-            push(buf, k)
-        elseif v ~= false then
-            local v_t = type(v)
-            -- {k = str|num} -> k=v
-            if v_t == 'string' or v_t == 'number' then
-                 push(buf, ('%s=%s'):format(k, escape_v(v)))
-            elseif v_t == 'table' then
-                -- {k = {v1, v2...}} -> k=v1&k=v2...
-                -- {k = {}} ->
-                for _, v2 in ipairs(v) do
-                    push(buf, ('%s=%s'):format(k, escape_v(v2)))
-                end
-            end
-        end
-    end
-    return join(buf, '&')
-end
 
 
-local ngx_proto = {}
-
-ngx_proto.encode_args = encode_args
-
-local logs = {}
-for level, name in pairs(NGX_LOG_LEVEL) do
-    ngx_proto[name] = level
-    logs[level] = unit[name:lower()] or unit.alert
-end
-
-local cap_mtds_id2name = {}
-for n, k in ipairs(NGX_CAPTURE_METHOD) do
-    n = tointeger(2 ^ n)
-    cap_mtds_id2name[n] = k
-    ngx_proto['HTTP_' .. k] = n
-end
-
-local http_status_id2name = {}
-for k, n in pairs(NGX_HTTP_STATUS) do
-    http_status_id2name[n] = k
-    ngx_proto['HTTP_' .. k] = n
-end
-
-ngx_proto.null = null
-
-ngx_proto.log = function(level, ...)
-    local name = NGX_LOG_LEVEL[level]
-    local args = {...}
-    for i, arg in ipairs(args) do
-        args[i] = arg == null and 'null' or tostring(arg)
-    end
-    -- NOTE hsq join 得到的字串中可能含有 % 字符，若置于 fmt 参数位置会报错（缺少参数）。
-    logs[level]('%s', join(args))
-end
-
-ngx_proto.time = os.time
-ngx_proto.http_time = function(ts)
-    return os_date(LAST_MODIFIED_FMT, ts)
-end
-
-ngx_proto.decode_base64 = decode_base64
-ngx_proto.encode_base64 = encode_base64
-
-ngx_proto.get_phase = function()
-    -- NOTE hsq 只支持 content ？ unit 不区分 phase ？
-    return 'content'
-end
-
--- TODO hsq ngx 需要拆分为基础部分和框架部分？
+-- TODO hsq ngx 拆分：基础部分和web框架部分？
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
 --      需要注意隔离请求私有数据，如 ngx_req
-local function make_ngx(cfg, req)
+-- @link_num int|nil 请求链的节点数
+local function make_ngx(cfg, req, link_num)
+    link_num = (link_num or 0) + 1
+    if link_num > NGX_HTTP_MAX_SUBREQUESTS then
+        unit.err('subrequests cycle while processing "%s"', req.path)
+        return error('request was aborted', 2)
+    end
+
     local ngx = {
         config = {
             prefix = function() return cfg.prefix end,
         },
     }
 
-    merge(ngx, ngx_proto)
+    merge(ngx, ngx_const.ngx_const)
+    merge(ngx, (require 'ngx.proto'))
 
+
+    -- TODO hsq 内部状态集中管理？或者按照功能拆分成子模块？
     local status
     local resp_sent = false
 
@@ -238,7 +79,7 @@ local function make_ngx(cfg, req)
         query_string    = req.query,
         args            = req.query,
         pid             = getpid(),
-        }
+    }
     local user_vars = {}
     local uri_args, uri_args_msg = nil, nil
     local post_args, post_args_msg = nil, nil
@@ -292,10 +133,18 @@ local function make_ngx(cfg, req)
         end,
     })
 
-    -- body_status: 0-未处理，1-已读，2-已丢弃
-    local ngx_req = {body_status = 0}
+
+    -- 0-未处理，1-已读，2-已丢弃
+    local body_status = 0
+
+    local ngx_req = {}
     ngx.req = ngx_req
 
+    -- capture exec 都是内部请求
+    -- TODO hsq unit 如何实现 internal 指令？有必要？
+    ngx_req.is_internal = function()
+        return link_num > 1
+    end
     ngx_req.get_method = function()
         return req.method
     end
@@ -328,24 +177,24 @@ local function make_ngx(cfg, req)
     end
     -- 同步非阻塞，然后才可 get_body_data get_post_args 等
     ngx_req.read_body = function()
-        if ngx_req.body_status > 0 then
-            return ngx_req.body_status, false
+        if body_status > 0 then
+            return body_status, false
         end
         -- TODO hsq 连接错误等可调用 error() 或以 500 结束请求处理？
-        ngx_req.body_status = 1
+        body_status = 1
         return 1, true
     end
     ngx_req.discard_body = function()
-        if ngx_req.body_status > 0 then
-            return ngx_req.body_status, false
+        if body_status > 0 then
+            return body_status, false
         end
         -- TODO hsq 同步非阻塞，读取数据并丢弃
-        ngx_req.body_status = 2
+        body_status = 2
         return 2, true
     end
     -- openresty: 比 ngx.var.request_body 高效，因少一次内存分配和拷贝。
     ngx_req.get_body_data = function()
-        if ngx_req.body_status == 0 or req.content_length == 0 then
+        if body_status == 0 or req.content_length == 0 then
             -- TODO hsq 或者已经读入文件中
             return nil
         end
@@ -359,6 +208,7 @@ local function make_ngx(cfg, req)
         return post_args, post_args_msg
     end
 
+
     -- 响应头
     local resp_headers = {}
     ngx.header = setmetatable({}, {
@@ -368,6 +218,10 @@ local function make_ngx(cfg, req)
             return resp_headers[k]
         end,
         __newindex = function(t, k, v)
+            if resp_sent then
+                unit.err('attempt to set ngx.header after sending out response headers')
+                return
+            end
             k = normalize_header(tostring(k))
             k = escape_k(k)
             if v == nil or (type(v) == 'table' and #v == 0) then
@@ -400,17 +254,18 @@ local function make_ngx(cfg, req)
                 end
             end
         end
-        setmetatable(resp_headers, {
-            __newindex = function(t, k, v)
-                unit.alert('响应标头已发出，不可更改。')
-            end
-        })
+        -- setmetatable(resp_headers, {
+        --     __newindex = function(t, k, v)
+        --         unit.alert('响应标头已发出，不可更改。')
+        --     end
+        -- })
         return vec
     end
 
+
     local contents = {}
     ngx.print = function(...)
-        resp_sent = true
+        -- resp_sent = true
         for _, v in ipairs{...} do
             if type(v) == 'table' then
                 ngx.print(v)
@@ -421,7 +276,7 @@ local function make_ngx(cfg, req)
         return 1
     end
     ngx.say = function(...)
-        resp_sent = true
+        -- resp_sent = true
         ngx.print(...)
         ngx.print('\n')
         return 1
@@ -430,6 +285,7 @@ local function make_ngx(cfg, req)
         resp_sent = true
         return join(contents)
     end
+
 
     local pid = getpid();
     local ppid = utils.getppid();
@@ -442,17 +298,13 @@ local function make_ngx(cfg, req)
         return pid
     end
 
+
     ngx.location = {}
 
     -- @uri string 可带 query_string
     -- @options table 可选
     ngx.location.capture = function(uri, options)
         -- TODO hsq 同步非阻塞，C层内部，无IPC，与ngx.redirect ngx.exec(内部重定向) 不同
-
-        -- TODO hsq 子请求嵌套上限 NGX_HTTP_MAX_SUBREQUESTS ，否则
-        --      [error] 13983#0: *1 subrequests cycle while processing "/uri"
-        --      ngx.req.is_internal(): capture exec 都是内部请求
-        --          internal 指令
 
         if type(uri) ~= 'string' or uri == '' then
             error(('invalid URI: %s!'):format(uri), 2)
@@ -476,10 +328,10 @@ local function make_ngx(cfg, req)
 
         local args_t = type(args)
         assert(args == nil or args_t == 'string' or args_t == 'table')
-        assert(ctx == nil or type(ctx) == 'table')
+        assert(ctx  == nil or type(ctx) == 'table')
         assert(vars == nil or type(vars) == 'table')
 
-        assert(ngx_req.body_status > 0, 'Need to call ngx.req.read_body() first!')
+        assert(body_status > 0, 'Need to call ngx.req.read_body() first!')
         -- ngx_req.read_body()
 
         -- share_all_vars 优先于 copy_all_vars
@@ -534,7 +386,7 @@ local function make_ngx(cfg, req)
         sub_req = readonly(sub_req)
         -- unit.debug((require 'inspect')(sub_req))
 
-        local sub_ngx = make_ngx(cfg, sub_req)
+        local sub_ngx = make_ngx(cfg, sub_req, link_num)
         local old_ngx = ngx
         _G.ngx = sub_ngx
 
@@ -569,7 +421,7 @@ local function make_ngx(cfg, req)
         __newindex = function(t, k, v)
             if k == 'status' then
                 if resp_sent then
-                    unit.warn('attempt to set ngx.status after sending out response headers')
+                    unit.err('attempt to set ngx.status after sending out response headers')
                 else
                     assert(not v or http_status_id2name[v])
                     status = v
