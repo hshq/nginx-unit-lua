@@ -10,10 +10,13 @@ unit_config, _G.unit_config = _G.unit_config, nil
 
 local args = table.concat({...}, '\n')
 
+local is_jit = _G['jit'] and true or false
+local lua_ver = is_jit and (_G['jit'].version:match('^(.-)%-')) or _VERSION
+
 -- NOTE hsq 自动生效
 local env_init
-if _G.jit then
-    env_init = _G.jit and os.getenv('LUA_INIT')
+if is_jit then
+    env_init = os.getenv('LUA_INIT')
 else
     env_init = os.getenv('LUA_INIT_5_4') or os.getenv('LUA_INIT')
 end
@@ -70,10 +73,9 @@ local function request_handler(req)
     assert(not res.truncated, 'Subrequest error, response body truncated')
 
     -- X-Powered-By 添加 Lua 版本信息
-    local ver = _G.jit and (_G.jit.version:match('^(.-)%-')) or _VERSION
     local xpb = ngx.header.x_powered_by
-    -- xpb = xpb and (xpb .. ' on ' .. ver) or ver
-    xpb = xpb and {xpb, ver} or ver
+    -- xpb = xpb and (xpb .. ' on ' .. lua_ver) or lua_ver
+    xpb = xpb and {xpb, lua_ver} or lua_ver
     ngx.header.x_powered_by = xpb
 
     return ngx.status, ngx.get_response_content(), ngx.get_response_headers()
