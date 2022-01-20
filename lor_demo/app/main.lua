@@ -61,11 +61,13 @@ local function request_handler(req)
     local app = require('app.server')
     app:run()
 
-    unit.debug((require 'inspect')(ngx.location.capture(
+    local res = ngx.location.capture(
         '/hello?a=b', {
             args = {a='c',b='d',e={1,2,3}}
         }
-    )))
+    )
+    unit.debug((require 'inspect')(res))
+    assert(not res.truncated, 'Subrequest error, response body truncated')
 
     -- X-Powered-By 添加 Lua 版本信息
     local ver = _G.jit and (_G.jit.version:match('^(.-)%-')) or _VERSION

@@ -40,7 +40,6 @@ local MAX_ARGS = 100
 local NGX_HTTP_MAX_SUBREQUESTS = 50 -- 子请求嵌套上限
 
 
--- TODO hsq ngx 拆分：基础部分和web框架部分？
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
 --      需要注意隔离请求私有数据，如 ngx_req
 -- @link_num int|nil 请求链的节点数
@@ -373,7 +372,7 @@ local function make_ngx(cfg, req, link_num)
             -- TODO hsq copy
         end
         -- 先处理 share/copy ，再 vars
-        -- TODO hsq vars
+        -- TODO hsq vars 哪些 var ？
 
         -- 发出子请求
         -- NOTE hsq 子请求继承了父请求的请求标头，注意子请求 proxy时可能关闭更好。
@@ -394,11 +393,11 @@ local function make_ngx(cfg, req, link_num)
         local app = require('app.server')
         app:run()
 
-        -- TODO hsq res{header={xx=str/vec}, truncated=bool[出错时]}
+        -- TODO hsq res{truncated=bool[出错时]}
         -- TODO hsq 子请求直接返回给 unit 就是 ngx.exec ？
         local res = {
             status    = sub_ngx.status,
-            header    = sub_ngx.get_response_headers(),
+            header    = resp_headers,   -- {xx=str/vec}
             body      = sub_ngx.get_response_content(),
             truncated = false,
         }

@@ -12,9 +12,10 @@ local is_jit     = base.is_jit
 local write_file = base.write_file
 
 local CFG_FILE = 'conf/config.lor.json'
+-- TODO hsq 配置文件中也有加载路径处理，重复了；或者将其作为模块来加载？
 local CFG_LUA  = 'conf/config.lor.lua'
 
--- TODO hsq 共享 app/main.lua 中的配置处理代码
+-- TODO hsq 共享 app/main.lua 中的配置处理代码？
 -- TODO hsq 生成 Makefile ，依赖 config.lor.lua 和 本文件？
 local func = ... or 'help'
 local args = {select(2, ...)}
