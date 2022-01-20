@@ -31,7 +31,7 @@ if LUA_VER == '5.4' then
     -- /usr/local/lib/pkgconfig/lua$(LUA_VER).pc
     LUA_INC = '/usr/local/include/lua' .. LUA_VER
     -- LUA_LIB = 'lua' .. LUA_VER
-elseif is_jit() then
+elseif is_jit then
     local JIT_DIR = '/usr/local/opt/luajit-openresty'
     -- lib/pkgconfig/luajit.pc
     LUA_INC = JIT_DIR .. '/include/luajit-2.1'

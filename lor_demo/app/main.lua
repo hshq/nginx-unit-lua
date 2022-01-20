@@ -10,7 +10,7 @@ unit_config, _G.unit_config = _G.unit_config, nil
 
 local args = table.concat({...}, '\n')
 
-local is_jit = _G['jit'] and true or false
+local is_jit = (_VERSION == 'Lua 5.1' and _G['jit']) and true or false
 local lua_ver = is_jit and (_G['jit'].version:match('^(.-)%-')) or _VERSION
 
 -- NOTE hsq 自动生效
@@ -39,8 +39,6 @@ local unit     = require 'lnginx-unit'
 local make_ngx = require 'ngx'
 local utils    = require 'utils'
 
-local readonly = utils.readonly
-
 -- unit.debug((require 'inspect'){
 --     unit_config = unit_config,
 --     unit = unit,
@@ -56,7 +54,6 @@ end
 
 local function request_handler(req)
     -- unit.debug((require 'inspect')(req))
-    req = readonly(req)
 
     local ngx = make_ngx(web_config, req)
     _G.ngx = ngx

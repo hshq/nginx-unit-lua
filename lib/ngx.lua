@@ -29,8 +29,6 @@ local clone      = utils.clone
 local merge      = utils.merge
 local readonly   = utils.readonly
 local parseQuery = utils.parseQuery
-local getpid     = utils.getpid
--- local getpid     = unit.getpid
 
 
 local DEFAULT_ROOT = 'html'
@@ -40,20 +38,30 @@ local MAX_ARGS = 100
 local NGX_HTTP_MAX_SUBREQUESTS = 50 -- 子请求嵌套上限
 
 
+local pid  = utils.getpid() -- unit.getpid
+local ppid = utils.getppid()
+
+
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
 --      需要注意隔离请求私有数据，如 ngx_req
 -- @link_num int|nil 请求链的节点数
 local function make_ngx(cfg, req, link_num)
-    link_num = (link_num or 0) + 1
-    if link_num > NGX_HTTP_MAX_SUBREQUESTS then
+    readonly(req)
+    readonly(req.fields)
+
+    link_num = (link_num or 0)
+    if link_num >= NGX_HTTP_MAX_SUBREQUESTS then
         unit.err('subrequests cycle while processing "%s"', req.path)
         return error('request was aborted', 2)
     end
+    link_num = link_num + 1
 
     local ngx = {
         config = {
             prefix = function() return cfg.prefix end,
         },
+        -- TODO hsq ngx.ctx 没意义？因 unit 没有多 phase ？
+        -- ctx = {}, -- 请求上下文，普通表，可覆盖；按需初始化
     }
 
     merge(ngx, ngx_const.ngx_const)
@@ -64,9 +72,6 @@ local function make_ngx(cfg, req, link_num)
     local status
     local resp_sent = false
 
-    -- 临时用 resolved_vars
-    -- local resolved_vars = {
-    -- }
     -- http://nginx.org/en/docs/http/ngx_http_core_module.html#variables
     local sys_vars = { -- 必须先定义。有字段，也可有数组部分。
         server_protocol = req.version,
@@ -74,13 +79,13 @@ local function make_ngx(cfg, req, link_num)
         remote_addr     = req.remote,
         document_root   = cfg.prefix .. '/' .. DEFAULT_ROOT,
         uri             = req.path,
-        request_uri     = req.target,
+        request_uri     = req.target,   -- uri?query_string
         query_string    = req.query,
-        args            = req.query,
-        pid             = getpid(),
+        args            = req.query,    -- query_string
+        pid             = pid,
     }
     local user_vars = {}
-    local uri_args, uri_args_msg = nil, nil
+    local uri_args,  uri_args_msg  = nil, nil
     local post_args, post_args_msg = nil, nil
     local function set_user_var(k, v)
         if type(v) ~= 'string' then
@@ -107,16 +112,14 @@ local function make_ngx(cfg, req, link_num)
                 end
                 v = uri_args[n]
                 if v then return v end
+            else
+                -- NOTE hsq ngx.var.HEADER: $http_HEADER 全小写、连接线变成下划线。
+                local h = k:match('^http_([a-z_0-9]+)$')
+                if h then
+                    h = req.field_refs[h]
+                    return h and req.fields[h] or nil
+                end
             end
-            -- NOTE hsq ngx.var.HEADER: $http_HEADER 全小写、连接线变成下划线。
-            local h = k:match('^http_([a-z_0-9]+)$')
-            if h then
-                h = req.field_refs[h]
-                return h and req.fields[h] or nil
-            end
-            -- if resolved_vars[k] then
-            --     return nil
-            -- end
             return log_err('未定义变量 <ngx.var.%s>', k)
         end,
         __newindex = function(t, k, v)
@@ -147,7 +150,14 @@ local function make_ngx(cfg, req, link_num)
     ngx_req.get_method = function()
         return req.method
     end
-    ngx_req.get_headers = function()
+    -- max_headers?, raw?
+    ngx_req.get_headers = function(max_headers, raw)
+        -- TODO hsq 同名的多个标头其值为 vector ；
+        --  max_headers: 为避免 DOS 攻击，缺省 MAX_ARGS 个，包括同名的；
+        --      超过则有第二返回值 'truncated' ； 0 则不限制；
+        --  raw: 缺省 false ，标头名转为纯小写，结果表+__index 元方法用于查找，
+        --      把 key 转为小写、其中下划线转为连接线，因此任意形式可找到；
+        --      true 则不处理标头名、不+__index 。
         return req.fields
     end
     local function get_XX_args(max_args, XX_args, args_str)
@@ -200,6 +210,12 @@ local function make_ngx(cfg, req, link_num)
         return req.preread_content
     end
     ngx_req.get_post_args = function(max_args)
+        -- TODO hsq 检查 MIME type application/x-www-form-urlencoded ？
+        -- TODO hsq k/v 都会根据 URI 转义规则进行反转义；同名 key 的值是 vector ；
+        --      无值则为 '' ；无 = 则为 true ；无 =val 丢弃；
+        --      超限则丢弃且有第二返回值 'truncated' ，0 则无限。
+        assert(body_status == 1, 'The request body is not read or discarded')
+        max_args = max_args or MAX_ARGS
         if req.method ~= 'POST' then
             return nil, 'invalid METHOD: ' .. req.method
         end
@@ -286,16 +302,15 @@ local function make_ngx(cfg, req, link_num)
     end
 
 
-    local pid = getpid();
-    local ppid = utils.getppid();
-    ngx.worker = {}
-    ngx.worker.id = function()
-        local id = pid - ppid
-        return id > 0 and id or id + 65536
-    end
-    ngx.worker.pid = function()
-        return pid
-    end
+    ngx.worker = {
+        id = function()
+            local id = pid - ppid
+            return id > 0 and id or id + 65536
+        end,
+        pid = function()
+            return pid
+        end,
+    }
 
 
     ngx.location = {}
@@ -316,7 +331,7 @@ local function make_ngx(cfg, req, link_num)
         local method              = options.method or ngx.HTTP_GET
         local body                = options.body    -- nil | str
         local args                = options.args    -- nil | str | table
-        local ctx                 = options.ctx     -- nil | table, 普通表，可覆盖，性能不高
+        local ctx                 = options.ctx     -- nil | table
         local vars                = options.vars    -- nil | table, 比 URL 参数高效
         local copy_all_vars       = not not options.copy_all_vars
         local share_all_vars      = not not options.share_all_vars  -- 慎用
@@ -331,7 +346,6 @@ local function make_ngx(cfg, req, link_num)
         assert(vars == nil or type(vars) == 'table')
 
         assert(body_status > 0, 'Need to call ngx.req.read_body() first!')
-        -- ngx_req.read_body()
 
         -- share_all_vars 优先于 copy_all_vars
         if share_all_vars and copy_all_vars then
@@ -344,13 +358,12 @@ local function make_ngx(cfg, req, link_num)
         elseif not always_forward_body then
             always_forward_body = (method == 'POST' or method == 'PUT')
         end
+
         if always_forward_body then
             -- TODO hsq ngx.req.read_body 直接转寄而非拷贝
-            --      放在这里合适？
         end
 
         -- NOTE args 为 string 则必须是已经转义的
-        -- TODO hsq args 放在这里合适？ table 不解析为 query_string 更好？
         -- uri = uri .. args
         local path, query--[[ , _fragment ]] = uri:match('^([^?#]*)%??([^#]*)(#?.*)$')
         if args then
@@ -359,11 +372,6 @@ local function make_ngx(cfg, req, link_num)
                 ((query2 == '') and query or query .. '&' .. query2)
         end
         local target = (query == '') and path or (path .. '?' .. query)
-
-        -- TODO hsq ctx=,ngx.ctx=table: 每请求独立的上下文，与子请求也独立，
-        --      普通表，可覆盖，性能不高
-        --      放在这里合适？
-        -- TODO hsq ngx.ctx 没意义？因 unit 没有多 phase ？
 
         -- local vars_real
         if share_all_vars then
@@ -382,10 +390,10 @@ local function make_ngx(cfg, req, link_num)
         sub_req.path   = path
         sub_req.query  = query
         sub_req.target = target
-        sub_req = readonly(sub_req)
         -- unit.debug((require 'inspect')(sub_req))
 
         local sub_ngx = make_ngx(cfg, sub_req, link_num)
+        if ctx then sub_ngx.ctx = ctx end
         local old_ngx = ngx
         _G.ngx = sub_ngx
 
@@ -426,6 +434,9 @@ local function make_ngx(cfg, req, link_num)
                     status = v
                 end
                 return
+            elseif k == 'ctx' then
+                assert(type(v) == 'table', 'ngx.ctx must be a table')
+                t.ctx = v
             end
             log_err('未实现 < ngx.%s = ... >', k)
         end,

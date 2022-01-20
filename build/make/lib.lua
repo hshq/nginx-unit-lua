@@ -32,7 +32,7 @@ local function gen(target, inc_file)
     local mk_file = target .. '/' .. _M.MK_FILE
     local config = _M.env(require(target .. '.make'))
 
-    if is_jit() then
+    if is_jit then
         _G._ENV = config
         config = assert(loadfile(inc_file))()
     else

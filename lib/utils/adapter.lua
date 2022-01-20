@@ -6,9 +6,7 @@ local function get_global(name)
     return _G[name]
 end
 
-local function is_jit()
-    return (_VERSION == 'Lua 5.1' and _G['jit']) and true or false
-end
+local is_jit = (_VERSION == 'Lua 5.1' and _G['jit']) and true or false
 
 if _VERSION == 'Lua 5.1' then
 

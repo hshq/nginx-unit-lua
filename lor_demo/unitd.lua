@@ -19,7 +19,7 @@ local CFG_LUA  = 'conf/config.lor.lua'
 -- TODO hsq 生成 Makefile ，依赖 config.lor.lua 和 本文件？
 local func = ... or 'help'
 local args = {select(2, ...)}
-_G.USE_JIT = is_jit()
+_G.USE_JIT = is_jit
 local config = assert(loadfile(CFG_LUA))()
 
 local unit = require 'lnginx-unit'
