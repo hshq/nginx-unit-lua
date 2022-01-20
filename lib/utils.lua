@@ -30,14 +30,18 @@ local function unescape(str)
         end)
 end
 
--- @max_args: nil|N>=0
+-- @max_args: N>=0|nil|false
+-- return table, msg?
 local function parseQuery(query, max_args)
     local args = {}
     if not query or type(query) ~= 'string' then
         return args
     end
-    local ps = query:split('&', max_args, true)
+    local ps = query:split('&', (max_args and max_args + 1), true);
     for i, p in ipairs(ps) do
+        if max_args and i > max_args then
+            return args, 'truncated'
+        end
         local k, eq, v = p:match('^([^=]+)(=?)(.*)$')
         k = k and unescape(k) or k
         v = v and unescape(v) or v

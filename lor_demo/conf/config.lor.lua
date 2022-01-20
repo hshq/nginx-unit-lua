@@ -64,7 +64,7 @@ config.unit = {
             arguments  = {'app/main.lua', '@' .. cfg_file},},},
     routes = {
         lor = {
-            {   match = { uri = '~^/(hello)?$', },
+            {   match = { uri = '~^/.*$', }, -- '~^/(hello)?$'
                 action = { pass = 'applications/lor', },},
             {   action = { share = 'app/static$uri', },},},},}
 

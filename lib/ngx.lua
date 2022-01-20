@@ -85,8 +85,8 @@ local function make_ngx(cfg, req, link_num)
         pid             = pid,
     }
     local user_vars = {}
-    local uri_args,  uri_args_msg  = nil, nil
-    local post_args, post_args_msg = nil, nil
+    local uri_args,  uri_args_msg,  uri_args_limit
+    local post_args, post_args_msg, post_args_limit
     local function set_user_var(k, v)
         if type(v) ~= 'string' then
             unit.alert('set_user_var(%s, %s) 值参数(#2) 必须是字符串。', k, type(v))
@@ -108,7 +108,7 @@ local function make_ngx(cfg, req, link_num)
             local n = k:match('^arg_([%w_]+)$')
             if n then
                 if not uri_args then
-                    uri_args = ngx.req.get_uri_args(MAX_ARGS)
+                    ngx.req.get_uri_args()
                 end
                 v = uri_args[n]
                 if v then return v end
@@ -152,7 +152,7 @@ local function make_ngx(cfg, req, link_num)
     end
     -- max_headers?, raw?
     ngx_req.get_headers = function(max_headers, raw)
-        -- TODO hsq 同名的多个标头其值为 vector ；
+        -- TODO hsq get_headers 同名的多个标头其值为 vector ；
         --  max_headers: 为避免 DOS 攻击，缺省 MAX_ARGS 个，包括同名的；
         --      超过则有第二返回值 'truncated' ； 0 则不限制；
         --  raw: 缺省 false ，标头名转为纯小写，结果表+__index 元方法用于查找，
@@ -160,28 +160,18 @@ local function make_ngx(cfg, req, link_num)
         --      true 则不处理标头名、不+__index 。
         return req.fields
     end
-    local function get_XX_args(max_args, XX_args, args_str)
-        if XX_args then
-            return XX_args
-        end
+    local function get_XX_args(args_str, max_args)
         max_args = tointeger(max_args or MAX_ARGS)
         if not max_args then
             return nil, 'invalid max_args'
         end
-        local msg = nil
-        if max_args > 0 then
-            XX_args = parseQuery(args_str, max_args + 1)
-            if #XX_args > max_args then
-                pop(XX_args)
-                msg = 'truncated'
-            end
-        else
-            XX_args = parseQuery(args_str)
-        end
-        return XX_args
+        return parseQuery(args_str, max_args > 0 and max_args)
     end
     ngx_req.get_uri_args = function(max_args)
-        uri_args, uri_args_msg = get_XX_args(max_args, uri_args, sys_vars.args)
+        if not uri_args or max_args ~= uri_args_limit then
+            uri_args, uri_args_msg = get_XX_args(sys_vars.args, max_args)
+            uri_args_limit = max_args
+        end
         return uri_args, uri_args_msg
     end
     -- 同步非阻塞，然后才可 get_body_data get_post_args 等
@@ -210,16 +200,16 @@ local function make_ngx(cfg, req, link_num)
         return req.preread_content
     end
     ngx_req.get_post_args = function(max_args)
-        -- TODO hsq 检查 MIME type application/x-www-form-urlencoded ？
-        -- TODO hsq k/v 都会根据 URI 转义规则进行反转义；同名 key 的值是 vector ；
-        --      无值则为 '' ；无 = 则为 true ；无 =val 丢弃；
-        --      超限则丢弃且有第二返回值 'truncated' ，0 则无限。
+        -- TODO hsq post_args 检查 MIME type Content-Type: application/x-www-form-urlencoded ？
+        -- TODO hsq 超限则丢弃且有第二返回值 'truncated' ，0 则无限。
         assert(body_status == 1, 'The request body is not read or discarded')
-        max_args = max_args or MAX_ARGS
         if req.method ~= 'POST' then
             return nil, 'invalid METHOD: ' .. req.method
         end
-        post_args, post_args_msg = get_XX_args(max_args, post_args, req.preread_content)
+        if not post_args or max_args ~= post_args_limit then
+            post_args, post_args_msg = get_XX_args(req.preread_content, max_args)
+            post_args_limit = max_args
+        end
         return post_args, post_args_msg
     end
 

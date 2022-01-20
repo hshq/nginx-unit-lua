@@ -58,6 +58,7 @@ local function request_handler(req)
     local ngx = make_ngx(web_config, req)
     _G.ngx = ngx
 
+    -- NOTE hsq require 保证 METHOD(Location) 只注册一次，重复会报错。
     local app = require('app.server')
     app:run()
 
@@ -75,7 +76,11 @@ local function request_handler(req)
     xpb = xpb and {xpb, lua_ver} or lua_ver
     ngx.header.x_powered_by = xpb
 
-    return ngx.status, ngx.get_response_content(), ngx.get_response_headers()
+    local status  = ngx.status or ngx.HTTP_OK
+    local content = ngx.get_response_content()
+    local headers = ngx.get_response_headers()
+
+    return status, content, headers
 end
 
 local ctx = check(unit.init(request_handler))
