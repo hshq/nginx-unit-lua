@@ -22,7 +22,6 @@ And several application processes, and various processes communicate with each o
 
 1.  dependence：
     - [lua-cjson](https://github.com/openresty/lua-cjson)
-    - [LuaFFI](https://github.com/facebookarchive/luaffifb)
     - [base64](https://github.com/aklomp/base64)
 
 2.  Compile `base64` :

@@ -46,8 +46,8 @@ local MAX_ARGS             = ngx_conf.MAX_ARGS or  100
 local HTTP_MAX_SUBREQUESTS = ngx_conf.HTTP_MAX_SUBREQUESTS or  50
 
 
-local pid  = utils.getpid() -- unit.getpid
-local ppid = utils.getppid()
+local pid  = unit.getpid()
+local ppid = unit.getppid()
 
 
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？

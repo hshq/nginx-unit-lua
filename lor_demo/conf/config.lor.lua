@@ -62,7 +62,7 @@ config.unit = {
 
             executable = USE_JIT and '/usr/local/bin/luajit' or
                                     '/usr/local/bin/lua',
-            arguments  = {'app/main.lua', '@' .. cfg_file},},},
+            arguments  = { 'app/main.lua', '@' .. cfg_file },},},
     routes = {
         lor = {
             {   match  = { uri = {'*.ico'} },

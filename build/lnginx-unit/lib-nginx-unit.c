@@ -96,6 +96,12 @@ LUAMOD_API int lib_func_getpid(lua_State *L) {
     return 1;
 }
 
+LUAMOD_API int lib_func_getppid(lua_State *L) {
+    pid_t ppid = getppid();
+    lua_pushinteger(L, ppid);
+    return 1;
+}
+
 #define GET_CTX(_var, index) \
     _var = luaL_checkudata(L, index, MT_CONTEXT); \
     if (!_var->ctx) { \
@@ -223,7 +229,8 @@ void request_handler(nxt_unit_request_info_t *req) {
     // F_FIELD_INDEX(authorization);
     // lua_setfield(L, -2, "field_refs");
 
-    // NOTE 经过测试，其与 preread_content 长度匹配，直至超过 8M Unit 反馈 413 Payload Too Large
+    // NOTE hsq 经过测试，其与 preread_content 长度匹配，
+    //      直至超过 8M Unit 反馈 413 Payload Too Large
     F_INT(content_length);
 
     F_INT(fields_count);
@@ -306,6 +313,7 @@ static const luaL_Reg lib_funcs[] = {
     {"init",     lib_func_init},
     {"log",      lib_func_log},
     {"getpid",   lib_func_getpid},
+    {"getppid",  lib_func_getppid},
     /* placeholders */
     {"VERSION",    NULL},
     {"VERNUM",     NULL},
