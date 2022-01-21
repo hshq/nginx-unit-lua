@@ -23,7 +23,13 @@ typedef struct context_s {
     nxt_unit_ctx_t *ctx;
 } context_t;
 
+typedef struct request_s {
+    nxt_unit_request_t *req;
+} request_t;
+
+// TODO hsq 把用户数据拆分出去？
 #define MT_CONTEXT "lnginx-unit.context"
+#define MT_REQUEST "lnginx-unit.request"
 
 #define RETURN_ERR_LITERAL(msg) \
     lua_pushboolean(L, False); \
@@ -45,6 +51,7 @@ typedef struct context_s {
 
 static boolean_t inited = False;
 static int LUA_RIDX_STR_FORMAT = LUA_NOREF;
+
 
 LUAMOD_API int lib_func_init(lua_State *L) {
     nxt_unit_init_t init = {0};
@@ -101,6 +108,7 @@ LUAMOD_API int lib_func_getppid(lua_State *L) {
     lua_pushinteger(L, ppid);
     return 1;
 }
+
 
 #define GET_CTX(_var, index) \
     _var = luaL_checkudata(L, index, MT_CONTEXT); \
@@ -163,11 +171,98 @@ def_ctx_mtd_log_(notice, NOTICE)
 def_ctx_mtd_log_(info,   INFO)
 def_ctx_mtd_log_(debug,  DEBUG)
 
+
+// @request userdata
+// @max_fields int
+// return len(fields), fields, flags
+LUAMOD_API int req_mtd_fields(lua_State *L) {
+    request_t          *ureq;
+    nxt_unit_request_t *req;
+    int                max_fields;
+    // boolean_t          truncated = False;
+
+    ureq = luaL_checkudata(L, 1, MT_REQUEST);
+    req = ureq->req;
+    if (!req) {
+        RETURN_ERR_LITERAL("请求已失效！");
+    }
+
+    max_fields = luaL_checkinteger(L, 2);
+    // if (0 < max_fields && max_fields < req->fields_count) {
+    //     truncated = True;
+    // } else {
+    //     max_fields = req->fields_count;
+    // }
+    if (max_fields <= 0 || req->fields_count < (uint32_t)max_fields) {
+        max_fields = req->fields_count;
+    }
+
+    lua_settop(L, 2);
+    lua_createtable(L, 0, max_fields); // stack#3: fields
+    lua_newtable(L);                   // stack#4: 0x01-skip, 0x02-hopbyhop
+    for (uint32_t i = 0; i < (uint32_t)max_fields; i++) {
+        nxt_unit_field_t *f = &req->fields[i];
+        const char *name = (const char *)nxt_unit_sptr_get(&f->name);
+        const char *value = (const char *)nxt_unit_sptr_get(&f->value);
+        int flags = lua_getfield(L, 3, name);
+        switch (flags) {
+            case LUA_TSTRING: {
+                lua_createtable(L, 2, 0);
+                lua_insert(L, -2);
+                lua_rawseti(L, -2, 1);
+                lua_pushvalue(L, -1);
+                lua_setfield(L, 3, name);
+            }
+            case LUA_TTABLE: {
+                int len = lua_rawlen(L, -1);
+                lua_pushlstring(L, value, f->value_length);
+                lua_rawseti(L, -2, len + 1);
+                lua_pop(L, 1);
+                break;
+            }
+            default: {
+                lua_pop(L, 1);
+                lua_pushlstring(L, value, f->value_length);
+                lua_setfield(L, 3, name);
+                break;
+            }
+        }
+        // TODO hsq skip 和 hopbyhop 如何处理？是否影响 max_fields ？
+        // NOTE hsq fields_hopbyhop 只可能有：
+        //      Connection Keep-Alive Proxy-Authenticate Proxy-Authorization
+        //      Trailer TE Transfer-Encoding Upgrade
+        flags = f->skip | (f->hopbyhop << 1);
+        if (flags) {
+            lua_pushinteger(L, flags);
+            lua_setfield(L, 4, name);
+        }
+    }
+    lua_settop(L, 4);
+    lua_pushinteger(L, max_fields);
+    lua_replace(L, 2);
+    return 3;
+
+    // #define F_FIELD_INDEX(NAME) \
+    //     if (NXT_UNIT_NONE_FIELD != req->NAME##_field) { \
+    //         nxt_unit_field_t *f = req->fields + req->NAME##_field; \
+    //         lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&f->name), f->name_length); \
+    //         lua_setfield(L, -2, #NAME); \
+    //     }
+    // lua_newtable(L);
+    // F_FIELD_INDEX(content_length);
+    // F_FIELD_INDEX(content_type);
+    // F_FIELD_INDEX(cookie);
+    // F_FIELD_INDEX(authorization);
+    // lua_setfield(L, -2, "field_refs");
+}
+
+
 void request_handler(nxt_unit_request_info_t *req) {
     int rc;
     nxt_unit_request_t *r = req->request;
     lua_State *L = req->unit->data;
     // context_t *uctx;
+    request_t *ureq;
 
     uint16_t status;
 
@@ -179,10 +274,7 @@ void request_handler(nxt_unit_request_info_t *req) {
     uint32_t max_fields_count, max_fields_size;
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, PTR2REF(req->ctx->data)); // uctx
-    // uctx = luaL_checkudata(L, -1, MT_CONTEXT);
-    // if (!uctx) {
-    //     nxt_unit_req_alert(req, "获取上下文失败！");
-    // }
+    // GET_CTX(uctx, -1);
     lua_getiuservalue(L, -1, 1); // function: request_handler
     lua_newtable(L); // arg-1: req
     #define F_STR(NAME) \
@@ -221,41 +313,14 @@ void request_handler(nxt_unit_request_info_t *req) {
 
     F_INT(fields_count);
 
-    lua_newtable(L); // req.field_hopbyhops
-    lua_createtable(L, 0, r->fields_count); // req.fields
-    for (uint32_t i = 0; i < r->fields_count; i++) {
-        nxt_unit_field_t *f = &r->fields[i];
-        if (!f->skip) {
-            lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&f->value), f->value_length);
-            lua_setfield(L, -2, (const char *)nxt_unit_sptr_get(&f->name));
-            if (f->hopbyhop) {
-                lua_pushboolean(L, True);
-                lua_setfield(L, -3, (const char *)nxt_unit_sptr_get(&f->name));
-            }
-        }
-    }
-    lua_setfield(L, -3, "fields");
-    lua_setfield(L, -2, "field_hopbyhops");
-    // TODO hsq field_hopbyhops 如何处理？
-    //  只可能有 Connection Keep-Alive Proxy-Authenticate Proxy-Authorization
-    //      Trailer TE Transfer-Encoding Upgrade
-
-    // #define F_FIELD_INDEX(NAME) \
-    //     if (NXT_UNIT_NONE_FIELD != r->NAME##_field) { \
-    //         nxt_unit_field_t *f = r->fields + r->NAME##_field; \
-    //         lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&f->name), f->name_length); \
-    //         lua_setfield(L, -2, #NAME); \
-    //     }
-    // lua_newtable(L);
-    // F_FIELD_INDEX(content_length);
-    // F_FIELD_INDEX(content_type);
-    // F_FIELD_INDEX(cookie);
-    // F_FIELD_INDEX(authorization);
-    // lua_setfield(L, -2, "field_refs");
+    ureq = lua_newuserdatauv(L, sizeof(request_t), 0);
+    ureq->req = r;
+    luaL_setmetatable(L, MT_REQUEST);
+    lua_setfield(L, -2, "request");
 
     lua_call(L, 1, 3);
 
-    status = lua_tointeger(L, -3);
+    status  = lua_tointeger(L, -3);
     content = lua_tolstring(L, -2, &content_length);
 
     max_fields_count = lua_rawlen(L, -1) / 2;
@@ -340,16 +405,27 @@ static const luaL_Reg ctx_mtds[] = {
     {"notice",  ctx_mtd_notice},
     {"info",    ctx_mtd_info},
     {"debug",   ctx_mtd_debug},
-    /* placeholders */
-    {NULL,         NULL}
+    {NULL,      NULL}
 };
 
 /*
-** metamethods for file handles
+** metamethods for context
 */
 static const luaL_Reg ctx_meta_mtds[] = {
     {"__index",    NULL}, /* place holder */
     {"__gc",       ctx_mtd_done},
+    {NULL,         NULL}};
+
+static const luaL_Reg req_mtds[] = {
+    {"fields", req_mtd_fields},
+    {NULL,     NULL}
+};
+
+/*
+** metamethods for request
+*/
+static const luaL_Reg req_meta_mtds[] = {
+    {"__index",    NULL}, /* place holder */
     {NULL,         NULL}};
 
 // NOTE hsq 用函数封装则传入的 luaL_Reg[] 变成指针后无法取得项目数。
@@ -421,6 +497,7 @@ LUAMOD_API int luaopen_unit_core(lua_State *L) {
 
     // 注册 userdadta: context_t
     new_meta(MT_CONTEXT, ctx_meta_mtds, ctx_mtds);
+    new_meta(MT_REQUEST, req_meta_mtds, req_mtds);
 
     // 在注册表中缓存 string.format
     // int top = lua_absindex(L, -1);

@@ -55,7 +55,6 @@ local ppid = unit.getppid()
 -- @link_num int|nil 请求链的节点数
 local function make_ngx(cfg, req, link_num)
     readonly(req)
-    readonly(req.fields)
 
     link_num = (link_num or 0)
     if link_num >= HTTP_MAX_SUBREQUESTS then
@@ -78,7 +77,9 @@ local function make_ngx(cfg, req, link_num)
 
     -- TODO hsq 内部状态集中管理？或者按照功能拆分成子模块？
     local status
-    local resp_sent = false
+    local resp_sent   = false
+    -- 0-未处理，1-已读，2-已丢弃
+    local body_status = 0
 
     -- http://nginx.org/en/docs/http/ngx_http_core_module.html#variables
     local sys_vars = { -- 必须先定义。有字段，也可有数组部分。
@@ -95,6 +96,7 @@ local function make_ngx(cfg, req, link_num)
     local user_vars = {}
     local uri_args,  uri_args_msg,  uri_args_limit
     local post_args, post_args_msg, post_args_limit
+    local headers,   headers_msg,   headers_limit,  headers_flag
     local function set_user_var(k, v)
         if type(v) ~= 'string' then
             unit.alert('set_user_var(%s, %s) 值参数(#2) 必须是字符串。', k, type(v))
@@ -126,7 +128,10 @@ local function make_ngx(cfg, req, link_num)
                 if h then
                     -- h = req.field_refs[h] or normalize_header(h)
                     h = normalize_header(h)
-                    return h and req.fields[h] or nil
+                    if not headers then
+                        ngx_req.get_headers()
+                    end
+                    return h and headers[h] or nil
                 end
             end
             return log_err('Undefined variable <ngx.var.%s>', k)
@@ -145,9 +150,6 @@ local function make_ngx(cfg, req, link_num)
     })
 
 
-    -- 0-未处理，1-已读，2-已丢弃
-    local body_status = 0
-
     local ngx_req = {}
     ngx.req = ngx_req
 
@@ -162,28 +164,31 @@ local function make_ngx(cfg, req, link_num)
     -- TODO hsq ngx.resp.get_headers ？与 req 相同。
     -- max_headers?, raw?
     ngx_req.get_headers = function(max_headers, raw)
-        -- TODO hsq get_headers 同名的多个标头其值为 vector ；
-        --  max_headers: 缺省 MAX_ARGS 个，包括同名的；
-        --      超过则有第二返回值 'truncated' ； 0 则不限制；
-        --      需要在源头控制
         max_headers = max_headers or MAX_ARGS
-        assert(max_headers <= 0 or req.fields_count <= max_headers)
-        local hs = req.fields
+        -- assert(max_headers <= 0 or req.fields_count <= max_headers)
+        if not headers or max_headers ~= headers_limit then
+            local headers_num
+            headers_num, headers, headers_flag = req.request:fields(max_headers)
+            unit.debug((require 'inspect'){flag = headers_flag})
+            headers_limit = max_headers
+            headers_msg = (headers_num < req.fields_count) and 'truncated' or nil
+        end
         if not raw then
             local hs2 = {}
-            for k, v in pairs(hs) do
+            for k, v in pairs(headers) do
                 hs2[lower(k)] = v
             end
-            hs = hs2
-            setmetatable(hs, {
+            headers = hs2
+            setmetatable(headers, {
                 __index = function(t, k)
                     k = lower(k):gsub('_', '-')
                     return rawget(t, k)
                 end,
             })
         end
-        return hs
+        return headers, headers_msg
     end
+
     local function get_XX_args(args_str, max_args)
         max_args = tointeger(max_args or MAX_ARGS)
         if not max_args then
@@ -228,7 +233,10 @@ local function make_ngx(cfg, req, link_num)
         if req.method ~= 'POST' then
             return nil, 'invalid METHOD: ' .. req.method
         end
-        assert(req.fields['Content-Type'] == 'application/x-www-form-urlencoded',
+        if not headers then
+            ngx_req.get_headers()
+        end
+        assert(headers['Content-Type'] == 'application/x-www-form-urlencoded',
                 'invalid MIME type')
         if not post_args or max_args ~= post_args_limit then
             post_args, post_args_msg = get_XX_args(req.preread_content, max_args)

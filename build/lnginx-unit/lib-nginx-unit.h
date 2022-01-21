@@ -24,6 +24,8 @@ LUAMOD_API int ctx_mtd_notice(lua_State *);
 LUAMOD_API int ctx_mtd_info(lua_State *);
 LUAMOD_API int ctx_mtd_debug(lua_State *);
 
+LUAMOD_API int req_mtd_fields(lua_State *);
+
 void request_handler(nxt_unit_request_info_t *);
 
 #endif // LIB_NGINX_UNIT_H
