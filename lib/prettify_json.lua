@@ -54,6 +54,13 @@ return function(task)
     local function q(v)
         push(buf, fmt('%q', v))
     end
+    -- TODO hsq LuaJIT 对数字等也加了双引号
+    if base.is_jit then
+        q = function(v)
+            local place_holder = (type(v) == 'string' and '%q' or '%s')
+            push(buf, fmt(place_holder, v))
+        end
+    end
 
     local function upto1(val)
         if COMPACT<2 then return false end

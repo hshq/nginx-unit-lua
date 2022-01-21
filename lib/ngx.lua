@@ -2,14 +2,17 @@ local unit      = require 'lnginx-unit'
 local utils     = require 'utils'
 local ngx_const = require 'ngx.const'
 local ngx_proto = require 'ngx.proto'
+local ngx_conf  = require 'conf.ngx'
 
 local require      = require
 local setmetatable = setmetatable
 local type         = type
 local pairs        = pairs
 local ipairs       = ipairs
+local rawget       = rawget
 local tostring     = tostring
 local tointeger    = math.tointeger
+local lower        = string.lower
 
 local log_err = unit.err
 
@@ -18,6 +21,7 @@ local http_status_id2name = ngx_const.http_status_id2name
 local escape_k            = ngx_proto.escape_k
 local escape_v            = ngx_proto.escape_v
 local normalize_header    = ngx_proto.normalize_header
+-- local flatten_header      = ngx_proto.flatten_header
 local encode_args         = ngx_proto.encode_args
 
 local push       = utils.push
@@ -31,11 +35,15 @@ local readonly   = utils.readonly
 local parseQuery = utils.parseQuery
 
 
-local DEFAULT_ROOT = 'html'
+local DEFAULT_ROOT         = ngx_conf.DEFAULT_ROOT or  'html'
 
-local MAX_ARGS = 100
+-- 为避免 DOS 攻击
+-- NOTE hsq 所影响的若干方法，同一方法若以不同数量限制调用，结果不同，实没必要，
+--      尽量只调用一次，或者使用同样的限制。
+local MAX_ARGS             = ngx_conf.MAX_ARGS or  100
 
-local NGX_HTTP_MAX_SUBREQUESTS = 50 -- 子请求嵌套上限
+-- 子请求嵌套上限
+local HTTP_MAX_SUBREQUESTS = ngx_conf.HTTP_MAX_SUBREQUESTS or  50
 
 
 local pid  = utils.getpid() -- unit.getpid
@@ -50,7 +58,7 @@ local function make_ngx(cfg, req, link_num)
     readonly(req.fields)
 
     link_num = (link_num or 0)
-    if link_num >= NGX_HTTP_MAX_SUBREQUESTS then
+    if link_num >= HTTP_MAX_SUBREQUESTS then
         unit.err('subrequests cycle while processing "%s"', req.path)
         return error('request was aborted', 2)
     end
@@ -116,11 +124,12 @@ local function make_ngx(cfg, req, link_num)
                 -- NOTE hsq ngx.var.HEADER: $http_HEADER 全小写、连接线变成下划线。
                 local h = k:match('^http_([a-z_0-9]+)$')
                 if h then
-                    h = req.field_refs[h]
+                    -- h = req.field_refs[h] or normalize_header(h)
+                    h = normalize_header(h)
                     return h and req.fields[h] or nil
                 end
             end
-            return log_err('未定义变量 <ngx.var.%s>', k)
+            return log_err('Undefined variable <ngx.var.%s>', k)
         end,
         __newindex = function(t, k, v)
             if k == 'args' then
@@ -150,15 +159,27 @@ local function make_ngx(cfg, req, link_num)
     ngx_req.get_method = function()
         return req.method
     end
+    -- TODO hsq ngx.resp.get_headers ？与 req 相同。
     -- max_headers?, raw?
     ngx_req.get_headers = function(max_headers, raw)
         -- TODO hsq get_headers 同名的多个标头其值为 vector ；
-        --  max_headers: 为避免 DOS 攻击，缺省 MAX_ARGS 个，包括同名的；
+        --  max_headers: 缺省 MAX_ARGS 个，包括同名的；
         --      超过则有第二返回值 'truncated' ； 0 则不限制；
-        --  raw: 缺省 false ，标头名转为纯小写，结果表+__index 元方法用于查找，
-        --      把 key 转为小写、其中下划线转为连接线，因此任意形式可找到；
-        --      true 则不处理标头名、不+__index 。
-        return req.fields
+        --      需要在源头控制
+        max_headers = max_headers or MAX_ARGS
+        assert(max_headers <= 0 or req.fields_count <= max_headers)
+        local hs = req.fields
+        if not raw then
+            hs = clone(hs)
+            map(hs, nil, lower)
+            setmetatable(hs, {
+                __index = function(t, k)
+                    k = lower(k):gsub('_', '-')
+                    return rawget(t, k)
+                end,
+            })
+        end
+        return hs
     end
     local function get_XX_args(args_str, max_args)
         max_args = tointeger(max_args or MAX_ARGS)
@@ -200,12 +221,12 @@ local function make_ngx(cfg, req, link_num)
         return req.preread_content
     end
     ngx_req.get_post_args = function(max_args)
-        -- TODO hsq post_args 检查 MIME type Content-Type: application/x-www-form-urlencoded ？
-        -- TODO hsq 超限则丢弃且有第二返回值 'truncated' ，0 则无限。
         assert(body_status == 1, 'The request body is not read or discarded')
         if req.method ~= 'POST' then
             return nil, 'invalid METHOD: ' .. req.method
         end
+        assert(req.fields['Content-Type'] == 'application/x-www-form-urlencoded',
+                'invalid MIME type')
         if not post_args or max_args ~= post_args_limit then
             post_args, post_args_msg = get_XX_args(req.preread_content, max_args)
             post_args_limit = max_args
@@ -234,7 +255,9 @@ local function make_ngx(cfg, req, link_num)
                 return
             end
             -- NOTE hsq 调用方确保提供正确的类型，构造好再简单赋值
-            -- TODO hsq 根据是否多项，在首次赋值前构造正确的类型？
+            -- TODO hsq header 根据是否多项，在首次赋值前构造正确的类型？
+            --      RFC2616 HTTP/1.1: 9通用 19请求 9响应 10实体
+            --      RFC4229 非正式
             -- TODO hsq 多值可以分开传输，也可以(先各自转义再)合并(，并用逗号分隔)。
             -- local v0 = resp_headers[k]
             if type(v) == 'table' then

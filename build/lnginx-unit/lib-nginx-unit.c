@@ -210,19 +210,20 @@ void request_handler(nxt_unit_request_info_t *req) {
     F_INT(websocket_handshake);
     F_INT(app_target);
 
-    #define F_FIELD_INDEX(NAME) \
-        if (NXT_UNIT_NONE_FIELD != obj->NAME##_field) { \
-            nxt_unit_field_t *f = obj->fields + obj->NAME##_field; \
-            lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&f->name), f->name_length); \
-            lua_setfield(L, -2, #NAME); \
-        }
-    lua_newtable(L);
-    F_FIELD_INDEX(content_length);
-    F_FIELD_INDEX(content_type);
-    F_FIELD_INDEX(cookie);
-    F_FIELD_INDEX(authorization);
-    lua_setfield(L, -2, "field_refs");
+    // #define F_FIELD_INDEX(NAME) \
+    //     if (NXT_UNIT_NONE_FIELD != obj->NAME##_field) { \
+    //         nxt_unit_field_t *f = obj->fields + obj->NAME##_field; \
+    //         lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&f->name), f->name_length); \
+    //         lua_setfield(L, -2, #NAME); \
+    //     }
+    // lua_newtable(L);
+    // F_FIELD_INDEX(content_length);
+    // F_FIELD_INDEX(content_type);
+    // F_FIELD_INDEX(cookie);
+    // F_FIELD_INDEX(authorization);
+    // lua_setfield(L, -2, "field_refs");
 
+    // NOTE 经过测试，其与 preread_content 长度匹配，直至超过 8M Unit 反馈 413 Payload Too Large
     F_INT(content_length);
 
     F_INT(fields_count);
@@ -243,6 +244,9 @@ void request_handler(nxt_unit_request_info_t *req) {
     }
     lua_setfield(L, -3, "fields");
     lua_setfield(L, -2, "field_hopbyhops");
+    // TODO hsq field_hopbyhops 如何处理？
+    //  只可能有 Connection Keep-Alive Proxy-Authenticate Proxy-Authorization
+    //      Trailer TE Transfer-Encoding Upgrade
 
     lua_call(L, 1, 3);
 

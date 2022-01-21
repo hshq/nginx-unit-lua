@@ -39,10 +39,13 @@ local unit     = require 'lnginx-unit'
 local make_ngx = require 'ngx'
 local utils    = require 'utils'
 
+
+-- -- 测试
 -- unit.debug((require 'inspect'){
 --     unit_config = unit_config,
 --     unit = unit,
 -- })
+
 
 local FAILED = 'Failed!\n'
 
@@ -52,29 +55,50 @@ local function check(ret, rc, err)
 end
 
 
+-- -- 测试
+-- local reg = false
+
+
 local function request_handler(req)
+    -- -- 测试
     -- unit.debug((require 'inspect')(req))
 
-    local ngx = make_ngx(web_config, req)
-    _G.ngx = ngx
+
+    _G.ngx = make_ngx(web_config, req)
 
     -- NOTE hsq require 保证 METHOD(Location) 只注册一次，重复会报错。
     local app = require('app.server')
+
+
+    -- -- 测试
+    -- if not reg then
+    --     reg = true
+    --     app:post('/post', function(req, res, next)
+    --         ngx.log(ngx.ERR, (require 'inspect'){ngx.req.get_post_args(1)})
+    --         next()
+    --     end)
+    -- end
+
+
     app:run()
 
-    local res = ngx.location.capture(
-        '/hello?a=b', {
-            args = {a='c',b='d',e={1,2,3}}
-        }
-    )
-    unit.debug((require 'inspect')(res))
-    assert(not res.truncated, 'Subrequest error, response body truncated')
 
+    -- -- 测试
+    -- local res = ngx.location.capture(
+    --     '/hello?a=b', {
+    --         args = {a='c',b='d',e={1,2,3}}
+    --     }
+    -- )
+    -- unit.debug((require 'inspect')(res))
+    -- assert(not res.truncated, 'Subrequest error, response body truncated')
+
+    -- 测试
     -- X-Powered-By 添加 Lua 版本信息
     local xpb = ngx.header.x_powered_by
     -- xpb = xpb and (xpb .. ' on ' .. lua_ver) or lua_ver
     xpb = xpb and {xpb, lua_ver} or lua_ver
     ngx.header.x_powered_by = xpb
+
 
     local status  = ngx.status or ngx.HTTP_OK
     local content = ngx.get_response_content()
