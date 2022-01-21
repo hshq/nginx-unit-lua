@@ -34,23 +34,9 @@ local function clear(tbl)
     end
 end
 
--- @func_v?
--- @func_k?
-local function map(tbl, func_v, func_k)
-    if func_k then
-        if func_v then
-            for k, v in pairs(tbl) do
-                tbl[func_k(k)] = func_v(v)
-            end
-        else
-            for k, v in pairs(tbl) do
-                tbl[func_k(k)] = v
-            end
-        end
-    elseif func_v then
-        for k, v in pairs(tbl) do
-            tbl[k] = func_v(v)
-        end
+local function map(tbl, func)
+    for k, v in pairs(tbl) do
+        tbl[k] = func(v)
     end
     return tbl
 end

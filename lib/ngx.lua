@@ -170,8 +170,11 @@ local function make_ngx(cfg, req, link_num)
         assert(max_headers <= 0 or req.fields_count <= max_headers)
         local hs = req.fields
         if not raw then
-            hs = clone(hs)
-            map(hs, nil, lower)
+            local hs2 = {}
+            for k, v in pairs(hs) do
+                hs2[lower(k)] = v
+            end
+            hs = hs2
             setmetatable(hs, {
                 __index = function(t, k)
                     k = lower(k):gsub('_', '-')
