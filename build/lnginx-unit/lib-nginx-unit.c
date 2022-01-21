@@ -186,19 +186,18 @@ void request_handler(nxt_unit_request_info_t *req) {
     lua_getiuservalue(L, -1, 1); // function: request_handler
     lua_newtable(L); // arg-1: req
     #define F_STR(NAME) \
-        lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&obj->NAME), obj->NAME##_length); \
+        lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&r->NAME), r->NAME##_length); \
         lua_setfield(L, -2, #NAME)
     #define F_STR0(NAME) \
-        lua_pushstring(L, (const char *)nxt_unit_sptr_get(&obj->NAME)); \
+        lua_pushstring(L, (const char *)nxt_unit_sptr_get(&r->NAME)); \
         lua_setfield(L, -2, #NAME)
     #define F_INT(NAME) \
-        lua_pushinteger(L, obj->NAME); \
+        lua_pushinteger(L, r->NAME); \
         lua_setfield(L, -2, #NAME)
     #define F_BOOL(NAME) \
-        lua_pushboolean(L, obj->NAME); \
+        lua_pushboolean(L, r->NAME); \
         lua_setfield(L, -2, #NAME)
 
-    #define obj r
     F_STR(method);
     F_STR(version);
     F_STR(remote);
@@ -207,34 +206,20 @@ void request_handler(nxt_unit_request_info_t *req) {
     F_STR(target);
     F_STR(path);
     F_STR(query);
+
+    // NOTE hsq 经过测试，其与 preread_content 长度匹配，
+    //      直至超过 8M Unit 反馈 413 Payload Too Large
+    F_INT(content_length);
     // F_STR0(preread_content);
-    lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&obj->preread_content),
-                        obj->content_length);
+    lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&r->preread_content),
+                        r->content_length);
     lua_setfield(L, -2, "preread_content");
 
     F_INT(tls);
     F_INT(websocket_handshake);
     F_INT(app_target);
 
-    // #define F_FIELD_INDEX(NAME) \
-    //     if (NXT_UNIT_NONE_FIELD != obj->NAME##_field) { \
-    //         nxt_unit_field_t *f = obj->fields + obj->NAME##_field; \
-    //         lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&f->name), f->name_length); \
-    //         lua_setfield(L, -2, #NAME); \
-    //     }
-    // lua_newtable(L);
-    // F_FIELD_INDEX(content_length);
-    // F_FIELD_INDEX(content_type);
-    // F_FIELD_INDEX(cookie);
-    // F_FIELD_INDEX(authorization);
-    // lua_setfield(L, -2, "field_refs");
-
-    // NOTE hsq 经过测试，其与 preread_content 长度匹配，
-    //      直至超过 8M Unit 反馈 413 Payload Too Large
-    F_INT(content_length);
-
     F_INT(fields_count);
-    #undef obj
 
     lua_newtable(L); // req.field_hopbyhops
     lua_createtable(L, 0, r->fields_count); // req.fields
@@ -254,6 +239,19 @@ void request_handler(nxt_unit_request_info_t *req) {
     // TODO hsq field_hopbyhops 如何处理？
     //  只可能有 Connection Keep-Alive Proxy-Authenticate Proxy-Authorization
     //      Trailer TE Transfer-Encoding Upgrade
+
+    // #define F_FIELD_INDEX(NAME) \
+    //     if (NXT_UNIT_NONE_FIELD != r->NAME##_field) { \
+    //         nxt_unit_field_t *f = r->fields + r->NAME##_field; \
+    //         lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&f->name), f->name_length); \
+    //         lua_setfield(L, -2, #NAME); \
+    //     }
+    // lua_newtable(L);
+    // F_FIELD_INDEX(content_length);
+    // F_FIELD_INDEX(content_type);
+    // F_FIELD_INDEX(cookie);
+    // F_FIELD_INDEX(authorization);
+    // lua_setfield(L, -2, "field_refs");
 
     lua_call(L, 1, 3);
 
