@@ -35,6 +35,8 @@ if #args > 0 and (args ~= env_init or not unit_config) then
 end
 local web_config = assert(unit_config and unit_config.web, 'invalid config')
 
+_G.DEBUG = web_config.DEBUG
+
 local unit     = require 'lnginx-unit'
 local make_ngx = require 'ngx'
 local utils    = require 'utils'

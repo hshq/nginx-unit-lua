@@ -51,6 +51,10 @@ local mod = {
     info   = make_log(LOG_LEVEL.INFO),
     debug  = make_log(LOG_LEVEL.DEBUG),
 }
+if not _G.DEBUG then
+    mod.debug = function(...) end
+end
+
 for k, v in pairs(mod) do
     core[k] = v
 end

@@ -1,5 +1,8 @@
 #!/usr/bin/env lua5.4
 
+-- NOTE hsq unit.debug(...) 开关。
+local DEBUG = true
+
 local USE_JIT = true
 if _G.USE_JIT ~= nil then
     USE_JIT = _G.USE_JIT
@@ -31,6 +34,7 @@ package.path = table.concat({
 local config = {}
 
 config.web = {
+    DEBUG  = DEBUG,
     -- NOTE hsq nginx/openresty 命令的 -p 选项设定的值
     prefix = pwd,
     set_vars = {
