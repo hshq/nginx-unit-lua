@@ -1,5 +1,7 @@
 # nginx-unit-lua
 
+## 中文文档 / [English doc](README.en.md)
+
 #### 介绍
 Nginx-Unit 的 Lua5.4/LuaJIT 支持。
 可运行 Lor 框架，有针对性的做了 Openresty 适配。

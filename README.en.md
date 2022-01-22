@@ -1,5 +1,7 @@
 # nginx-unit-lua
 
+## English doc / [中文文档](README.md)
+
 #### Description
 From Baidu translation.
 

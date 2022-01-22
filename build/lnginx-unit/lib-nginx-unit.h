@@ -1,6 +1,8 @@
 #ifndef LIB_NGINX_UNIT_H
 #define LIB_NGINX_UNIT_H
 
+// NOTE hsq 在 Makefile 中选择是否定义 NXT_DEBUG
+// #define NXT_DEBUG 1
 #include <nxt_unit.h>
 #include <nxt_unit_request.h>
 
