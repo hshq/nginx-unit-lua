@@ -117,11 +117,11 @@ local rules = {{
     },
 }
 
-for _, of in ipairs(O_FILES) do
-    push(rules, {
-        target = of,
-        deps = {(of:gsub('%.o$', '.h'))},
-    })
-end
+-- for _, of in ipairs(O_FILES) do
+--     push(rules, {
+--         target = of,
+--         deps = {(of:gsub('%.o$', '.h'))},
+--     })
+-- end
 
 return {vars = vars, rules = rules}

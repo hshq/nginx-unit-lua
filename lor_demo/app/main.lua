@@ -110,6 +110,7 @@ local function request_handler(req)
 end
 
 local ctx = check(unit.init(request_handler))
+unit.info(lua_ver)
 
 local ok = check(ctx:run())
 
