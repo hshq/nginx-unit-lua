@@ -45,8 +45,9 @@ And several application processes, and various processes communicate with each o
     ```
     cd ..
     # For lua5.4 generate ./Makefile and Makefile of each shared library
+    # Compile configuration: ./make/inc.lua and make.lua in each shared library directory
     # luajit make.lua
-    ./make.lua
+    ./make.lua # -g generate debug information, -r release
     make
     make clean
     ```
@@ -56,7 +57,7 @@ And several application processes, and various processes communicate with each o
 1.  ```
     cd lor_demo
     # If you execute the script with luajit, the generated configuration will start luajit.
-    ./unitd.lua        # View the configuration. The Unit configuration of the demo is in CONF-FILE
+    ./unitd.lua        # View the configuration. The Unit configuration of the demo is in conf/config.lor.lua
     ./unitd.lua save   # Generate and store configuration files in JSON format
     ./unitd.lua start  # Start the Unit server, stop/restart
     ./unitd.lua config # *save* and then push the configuration to Unit

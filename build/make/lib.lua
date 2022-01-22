@@ -28,9 +28,10 @@ local function lib(name)
 end
 
 
-local function gen(target, inc_file)
+local function gen(target, inc_file, debug)
     local mk_file = target .. '/' .. _M.MK_FILE
     local config = _M.env(require(target .. '.make'))
+    config.DEBUG = debug
 
     if is_jit then
         _G._ENV = config
@@ -75,7 +76,7 @@ local function env(tbl)
             local fs = {}
             for f in fields:gmatch('[%w_]+') do
                 local v = t[f]
-                if not v then
+                if v == nil then
                     error('invalid variable: ' .. f, 2)
                 end
                 push(fs, v)

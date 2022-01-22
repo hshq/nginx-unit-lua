@@ -169,7 +169,13 @@ local function make_ngx(cfg, req, link_num)
         if not headers or max_headers ~= headers_limit then
             local headers_num
             headers_num, headers, headers_flag = req.request:fields(max_headers)
-            unit.debug((require 'inspect'){flag = headers_flag})
+            -- TODO hsq 检查 req.headers 是否 skip/hopbyhop
+            if next(headers_flag) then
+                unit.alert((require 'inspect'){
+                    headers      = headers,
+                    headers_flag = headers_flag,
+                })
+            end
             headers_limit = max_headers
             headers_msg = (headers_num < req.fields_count) and 'truncated' or nil
         end

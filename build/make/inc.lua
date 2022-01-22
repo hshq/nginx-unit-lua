@@ -18,7 +18,7 @@ local map    = base.map
 local merge  = base.merge
 local is_jit = base.is_jit
 
-local DEBUG = true
+local DEBUG = _ENV('DEBUG')
 local COPTS = {
     DEBUG   = cmd{'-g', DBG_OPTS},
     RELEASE = '-O2',

@@ -1,5 +1,15 @@
 #!/usr/bin/env lua5.4
 
+local DEBUG = true
+for _, opt in ipairs{...} do
+    local opt_l = opt:lower()
+    if opt_l == '-g' then
+        DEBUG = true
+    elseif opt_l == '-r' then
+        DEBUG = false
+    end
+end
+
 package.path = table.concat({
     '../lib/?.lua',
     package.path,
@@ -26,7 +36,7 @@ local mk = {
 }
 
 for _, t in ipairs(libs) do
-    lib.gen(t, inc_file)
+    lib.gen(t, inc_file, DEBUG)
     push(mk.all, '$(MAKE) -C ' .. t)
     push(mk.clean, '$(MAKE) -C ' .. t .. ' clean')
 end
