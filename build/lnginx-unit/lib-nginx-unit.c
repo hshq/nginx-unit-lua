@@ -4,6 +4,7 @@
 #include <lualib.h>
 #include <unistd.h>
 #include <assert.h>
+#include <openssl/md5.h>
 
 #include "lib-nginx-unit.h"
 
@@ -68,12 +69,39 @@ LUAMOD_API int lib_func_getppid(lua_State *L) {
     return 1;
 }
 
+LUAMOD_API int lib_func_md5(lua_State *L) {
+    const char *str;
+    size_t len;
+    boolean_t bin;
+
+    // unsigned char md[MD5_DIGEST_LENGTH];
+    unsigned char *md;
+    char         buf[MD5_DIGEST_LENGTH * 2];
+
+    str = luaL_checklstring(L, 1, &len);
+    bin = lua_toboolean(L, 2);
+
+    // MD5((const unsigned char *)str, len, md);
+    md = MD5((const unsigned char *)str, len, NULL);
+
+    if (bin) {
+        lua_pushlstring(L, (const char *)md, MD5_DIGEST_LENGTH);
+    } else {
+        for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+            sprintf(buf + i * 2, "%02x", md[i]);
+        }
+        lua_pushlstring(L, buf, MD5_DIGEST_LENGTH * 2);
+    }
+
+    return 1;
+}
 
 static const luaL_Reg lib_funcs[] = {
     {"init",     lib_func_init},
     {"log",      lib_func_log},
     {"getpid",   lib_func_getpid},
     {"getppid",  lib_func_getppid},
+    {"md5",      lib_func_md5},
     /* placeholders */
     {"VERSION",    NULL},
     {"VERNUM",     NULL},

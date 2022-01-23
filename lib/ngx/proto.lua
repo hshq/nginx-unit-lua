@@ -2,6 +2,7 @@
 local cjson     = require 'cjson'
 local utils     = require 'utils'
 local ngx_const = require 'ngx.const'
+local unit      = require 'lnginx-unit'
 
 local type     = type
 local tonumber = tonumber
@@ -16,6 +17,8 @@ local logs          = ngx_const.logs
 
 local push = utils.push
 local join = utils.join
+
+local md5 = unit.md5
 
 
 -- NOTE hsq strftime
@@ -110,6 +113,10 @@ local function get_phase()
     return 'content'
 end
 
+local function md5_bin(str)
+    return md5(str, true)
+end
+
 
 return {
     null = null,
@@ -128,4 +135,7 @@ return {
 
     log         = log,
     get_phase   = get_phase,
+
+    md5 = md5,
+    md5_bin = md5_bin,
 }
