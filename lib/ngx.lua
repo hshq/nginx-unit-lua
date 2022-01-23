@@ -2,7 +2,6 @@ local unit      = require 'lnginx-unit'
 local utils     = require 'utils'
 local ngx_const = require 'ngx.const'
 local ngx_proto = require 'ngx.proto'
-local ngx_conf  = require 'conf.ngx'
 
 local require      = require
 local setmetatable = setmetatable
@@ -10,11 +9,13 @@ local type         = type
 local pairs        = pairs
 local ipairs       = ipairs
 local rawget       = rawget
+local rawset       = rawset
 local tostring     = tostring
 local tointeger    = math.tointeger
 local lower        = string.lower
 
 local log_err = unit.err
+local log_warn = unit.warn
 
 local cap_mtds_id2name    = ngx_const.cap_mtds_id2name
 local http_status_id2name = ngx_const.http_status_id2name
@@ -35,20 +36,26 @@ local readonly   = utils.readonly
 local parseQuery = utils.parseQuery
 
 
-local DEFAULT_ROOT         = ngx_conf.DEFAULT_ROOT or  'html'
+local DEFAULT_ROOT         = 'html'
 
 -- 为避免 DOS 攻击
 -- NOTE hsq 所影响的若干方法，同一方法若以不同数量限制调用，结果不同，实没必要，
 --      尽量只调用一次，或者使用同样的限制。
-local MAX_ARGS             = ngx_conf.MAX_ARGS or  100
+local MAX_ARGS             = 100
 
 -- 子请求嵌套上限
-local HTTP_MAX_SUBREQUESTS = ngx_conf.HTTP_MAX_SUBREQUESTS or  50
+local HTTP_MAX_SUBREQUESTS = 50
 
 
 local pid  = unit.getpid()
 local ppid = unit.getppid()
 
+
+local function init_ngx(ngx_conf)
+    DEFAULT_ROOT         = ngx_conf.DEFAULT_ROOT         or DEFAULT_ROOT
+    MAX_ARGS             = ngx_conf.MAX_ARGS             or MAX_ARGS
+    HTTP_MAX_SUBREQUESTS = ngx_conf.HTTP_MAX_SUBREQUESTS or HTTP_MAX_SUBREQUESTS
+end
 
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
 --      需要注意隔离请求私有数据，如 ngx_req
@@ -81,10 +88,15 @@ local function make_ngx(cfg, req, link_num)
     -- 0-未处理，1-已读，2-已丢弃
     local body_status = 0
 
+    local ngx_req = {}
+    ngx.req = ngx_req
+
     -- http://nginx.org/en/docs/http/ngx_http_core_module.html#variables
     local sys_vars = { -- 必须先定义。有字段，也可有数组部分。
         server_protocol = req.version,
         server_name     = req.server_name,
+        host            = req.server_name,
+        server_port     = req.server_port,
         remote_addr     = req.remote,
         document_root   = cfg.prefix .. '/' .. DEFAULT_ROOT,
         uri             = req.path,
@@ -134,7 +146,9 @@ local function make_ngx(cfg, req, link_num)
                     return h and headers[h] or nil
                 end
             end
-            return log_err('Undefined variable <ngx.var.%s>', k)
+            -- return log_err('Undefined variable <ngx.var.%s>', k)
+            log_warn('Undefined variable <ngx.var.%s>', k)
+            return nil
         end,
         __newindex = function(t, k, v)
             if k == 'args' then
@@ -150,12 +164,14 @@ local function make_ngx(cfg, req, link_num)
     })
 
 
-    local ngx_req = {}
-    ngx.req = ngx_req
-
     -- capture exec 都是内部请求
     -- TODO hsq unit 如何实现 internal 指令？有必要？
     ngx_req.is_internal = function()
+        return link_num > 1
+    end
+    -- TODO hsq 实现内部重定向后再修改 is_internal():
+    --      子请求都是内部请求，内部重定向后的请求也是。
+    ngx.is_subrequest = function()
         return link_num > 1
     end
     ngx_req.get_method = function()
@@ -449,7 +465,7 @@ local function make_ngx(cfg, req, link_num)
             if k == 'status' then
                 return status
             elseif k == 'ctx' then
-                t.ctx = {}
+                rawset(t, k, {})
                 return t.ctx
             end
             log_err('未实现 < ... = ngx.%s >', k)
@@ -473,4 +489,7 @@ local function make_ngx(cfg, req, link_num)
     })
 end
 
-return make_ngx
+return {
+    init_ngx = init_ngx,
+    make_ngx = make_ngx,
+}

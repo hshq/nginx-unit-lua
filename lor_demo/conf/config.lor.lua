@@ -19,13 +19,17 @@ local env = pwd:match('^(.+)/[^/]+$')
 local ver = _VERSION:match('^Lua (.+)$')
 
 package.cpath = table.concat({
+    -- Sys, Nginx-Unit, Auxiliary module, ...
     env .. '/lib/'..ver..'/?.so',
     package.cpath,
 }, ';')
 package.path = table.concat({
+    -- Lor App
     pwd .. '/app/?.lua',
     pwd .. '/?.lua',
-    env .. '/lib/lor/?.lua',
+    -- Lor Framework
+    env .. '/lor/?.lua',
+    -- Sys, Nginx-Unit, Auxiliary module, ...
     env .. '/lib/?.lua',
     -- env .. '/lib/'..ver..'/?.lua',
     package.path,
@@ -33,7 +37,7 @@ package.path = table.concat({
 
 local config = {}
 
-config.web = {
+config.app = {
     DEBUG  = DEBUG,
     -- NOTE hsq nginx/openresty 命令的 -p 选项设定的值
     prefix = pwd,
@@ -51,7 +55,13 @@ config.web = {
     },
 }
 
-config.unit = {
+config.ngx = {
+    -- DEFAULT_ROOT         = 'html',
+    MAX_ARGS             = 64,
+    HTTP_MAX_SUBREQUESTS = 8,
+}
+
+config.host = {
     -- TODO hsq 支持环境变量 LOR_ENV=env ？
     -- TODO hsq 端口号来自 lib.lor.bin.scaffold.nginx.config ，生成 web 和运行都是。
     listeners = { ['*:8888'] = { pass = 'routes/lor', },},

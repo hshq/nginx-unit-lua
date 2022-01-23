@@ -33,13 +33,16 @@ if #args > 0 and (args ~= env_init or not unit_config) then
     end
     unit_config, _G.unit_config = (unit_config or _G.unit_config), nil
 end
-local web_config = assert(unit_config and unit_config.web, 'invalid config')
 
-_G.DEBUG = web_config.DEBUG
+local app_config = assert(unit_config and unit_config.app, 'invalid config')
+_G.DEBUG = app_config.DEBUG
 
-local unit     = require 'lnginx-unit'
-local make_ngx = require 'ngx'
-local utils    = require 'utils'
+local unit    = require 'lnginx-unit'
+local ngx_mod = require 'ngx'
+local utils   = require 'utils'
+
+ngx_mod.init_ngx(unit_config.ngx)
+local make_ngx = ngx_mod.make_ngx
 
 
 -- -- 测试
@@ -66,7 +69,7 @@ local function request_handler(req)
     -- unit.debug((require 'inspect')(req))
 
 
-    _G.ngx = make_ngx(web_config, req)
+    _G.ngx = make_ngx(app_config, req)
 
     -- NOTE hsq require 保证 METHOD(Location) 只注册一次，重复会报错。
     local app = require('app.server')
@@ -108,6 +111,7 @@ local function request_handler(req)
 
     return status, content, headers
 end
+
 
 local ctx = check(unit.init(request_handler))
 unit.info(lua_ver)

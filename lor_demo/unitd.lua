@@ -27,15 +27,15 @@ local cjson = require 'cjson'
 
 -- local SOCK = unit.DEFAULT_CONFIG.CONTROL_SOCK:gsub('.-:', '')
 local SOCK = unit.DEFAULT_CONFIG.CONTROL_SOCK:match('^.-:?([^:]+)$')
-local HOST, PORT = next(config.unit.listeners):match('(.+):(.+)')
+local HOST, PORT = next(config.host.listeners):match('(.+):(.+)')
 HOST = HOST == '*' and 'localhost' or HOST
 
 
 local prettify = (require 'prettify_json'){
-    val = config.unit,
+    val = config.host,
     COMPACT = 2,
 }
-config = cjson.encode(config.unit)
+config = cjson.encode(config.host)
 -- NOTE hsq unit 收到配置字串会自动过滤
 config = config:gsub('\\/', '/')
 
