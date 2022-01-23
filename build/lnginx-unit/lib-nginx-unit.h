@@ -15,6 +15,10 @@
 #define MT_CONTEXT "lnginx-unit.context"
 #define MT_REQUEST "lnginx-unit.request"
 
+#define NXT_UNIT_HASH_HOST 0xE6EB
+
+#define GET_STR(p) (const char *)nxt_unit_sptr_get(p)
+
 
 #define RETURN_ERR_LITERAL(msg) \
     lua_pushboolean(L, False); \

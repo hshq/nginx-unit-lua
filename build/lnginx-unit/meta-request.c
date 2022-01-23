@@ -31,8 +31,8 @@ LUAMOD_API int req_mtd_fields(lua_State *L) {
     lua_newtable(L);                   // stack#4: 0x01-skip, 0x02-hopbyhop
     for (uint32_t i = 0; i < (uint32_t)max_fields; i++) {
         nxt_unit_field_t *f = &req->fields[i];
-        const char *name = (const char *)nxt_unit_sptr_get(&f->name);
-        const char *value = (const char *)nxt_unit_sptr_get(&f->value);
+        const char *name = GET_STR(&f->name);
+        const char *value = GET_STR(&f->value);
         int flags = lua_getfield(L, 3, name);
         switch (flags) {
             case LUA_TSTRING: {
@@ -74,7 +74,7 @@ LUAMOD_API int req_mtd_fields(lua_State *L) {
     // #define F_FIELD_INDEX(NAME) \
     //     if (NXT_UNIT_NONE_FIELD != req->NAME##_field) { \
     //         nxt_unit_field_t *f = req->fields + req->NAME##_field; \
-    //         lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&f->name), f->name_length); \
+    //         lua_pushlstring(L, GET_STR(&f->name), f->name_length); \
     //         lua_setfield(L, -2, #NAME); \
     //     }
     // lua_newtable(L);

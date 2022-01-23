@@ -1,5 +1,7 @@
 #include "lib-nginx-unit.h"
 
+#include <stdlib.h>
+
 
 void request_handler(nxt_unit_request_info_t *req) {
     int rc;
@@ -22,10 +24,10 @@ void request_handler(nxt_unit_request_info_t *req) {
     lua_getiuservalue(L, -1, 1); // function: request_handler
     lua_newtable(L); // arg-1: req
     #define F_STR(NAME) \
-        lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&r->NAME), r->NAME##_length); \
+        lua_pushlstring(L, GET_STR(&r->NAME), r->NAME##_length); \
         lua_setfield(L, -2, #NAME)
     #define F_STR0(NAME) \
-        lua_pushstring(L, (const char *)nxt_unit_sptr_get(&r->NAME)); \
+        lua_pushstring(L, GET_STR(&r->NAME)); \
         lua_setfield(L, -2, #NAME)
     #define F_INT(NAME) \
         lua_pushinteger(L, r->NAME); \
@@ -47,15 +49,27 @@ void request_handler(nxt_unit_request_info_t *req) {
     //      直至超过 8M Unit 反馈 413 Payload Too Large
     F_INT(content_length);
     // F_STR0(preread_content);
-    lua_pushlstring(L, (const char *)nxt_unit_sptr_get(&r->preread_content),
+    lua_pushlstring(L, GET_STR(&r->preread_content),
                         r->content_length);
     lua_setfield(L, -2, "preread_content");
 
     F_INT(tls);
     F_INT(websocket_handshake);
+    // TODO hsq 同一个 App 的多个进程的编号？似乎不是不同的 App 的编号。
     F_INT(app_target);
 
     F_INT(fields_count);
+
+    for (uint32_t i = 0; i < r->fields_count; i++) {
+        nxt_unit_field_t *f = &r->fields[i];
+        if (f->hash == NXT_UNIT_HASH_HOST) {
+            // const char *port = strrchr(GET_STR(&f->value), ':');
+            // lua_pushinteger(L, port ? atoi(port + 1) : 80);
+            const char *port = GET_STR(&f->value) + r->server_name_length;
+            lua_pushinteger(L, *port ==':' ? atoi(port + 1) : 80);
+            lua_setfield(L, -2, "server_port");
+        }
+    }
 
     ureq = lua_newuserdatauv(L, sizeof(request_t), 0);
     ureq->req = r;
