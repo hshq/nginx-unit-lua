@@ -1,5 +1,4 @@
 -- 无状态函数原型
-local cjson     = require 'cjson'
 local utils     = require 'utils'
 local ngx_const = require 'ngx.const'
 local unit      = require 'lnginx-unit'
@@ -10,15 +9,13 @@ local char     = string.char
 local upper    = string.upper
 local os_date  = os.date
 
-local null = cjson.null
-
 local NGX_LOG_LEVEL = ngx_const.NGX_LOG_LEVEL
 local logs          = ngx_const.logs
 
-local push = utils.push
-local join = utils.join
-
-local md5 = unit.md5
+local push  = utils.push
+local join  = utils.join
+local md5   = utils.md5
+local crc32 = utils.crc32
 
 
 -- NOTE hsq strftime
@@ -119,8 +116,6 @@ end
 
 
 return {
-    null = null,
-
     decode_base64 = utils.decode_base64,
     encode_base64 = utils.encode_base64,
 
@@ -136,6 +131,9 @@ return {
     log         = log,
     get_phase   = get_phase,
 
-    md5 = md5,
-    md5_bin = md5_bin,
+    md5         = md5,
+    md5_bin     = md5_bin,
+    crc32       = crc32,
+    crc32_short = crc32,
+    crc32_long  = crc32,
 }

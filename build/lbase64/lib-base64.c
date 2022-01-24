@@ -1,13 +1,17 @@
-
+// TODO hsq 改名字？或者合并？
 #define lib_base64_c
 #define LUA_LIB
 
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "config.h"
-#include "libbase64.h"
+#include <base64/lib/config.h>
+#include <base64/include/libbase64.h>
+
 #include "lib-base64.h"
+
+#include <openssl/md5.h>
+#include <gityf_crc/crc32.h>
 
 
 #define AUTO_CODEC 0
@@ -40,7 +44,7 @@ struct kv {
 //     {"sse42",  HAVE_SSE42},
 //     {"avx",    HAVE_AVX},
 // };
-static struct kv codec[] = {
+static struct kv base64_codec[] = {
     {"auto",    AUTO_CODEC},
     #if HAVE_AVX2
     {"avx2",    BASE64_FORCE_AVX2},
@@ -68,8 +72,8 @@ static struct kv codec[] = {
 
 
 static int check_codec(int c) {
-    for (size_t i = 0; i < KV_COUNT(codec); i++) {
-        if (c == codec[i].val) {
+    for (size_t i = 0; i < KV_COUNT(base64_codec); i++) {
+        if (c == base64_codec[i].val) {
             return c;
         }
     }
@@ -79,7 +83,7 @@ static int check_codec(int c) {
 
 // @codec int
 // return old codec|nil, msg
-LUAMOD_API int lib_func_set_codec(lua_State *L) {
+LUAMOD_API int lib_func_base64_set_codec(lua_State *L) {
     int c = luaL_optinteger(L, 1, AUTO_CODEC);
     CHECK(-1 == check_codec(c), ERR_CODEC);
 
@@ -90,7 +94,7 @@ LUAMOD_API int lib_func_set_codec(lua_State *L) {
 
 // @str string
 // @no_padding? boolean
-LUAMOD_API int lib_func_encode(lua_State *L) {
+LUAMOD_API int lib_func_base64_encode(lua_State *L) {
     const char *src;
     char *dst;
     size_t slen, dlen;
@@ -120,7 +124,7 @@ LUAMOD_API int lib_func_encode(lua_State *L) {
 
 // @str string
 // return string|nil, msg
-LUAMOD_API int lib_func_decode(lua_State *L) {
+LUAMOD_API int lib_func_base64_decode(lua_State *L) {
     const char *src;
     char *dst;
     size_t slen, dlen;
@@ -146,38 +150,81 @@ LUAMOD_API int lib_func_decode(lua_State *L) {
     return 1;
 }
 
-LUAMOD_API int lib_func_stream_encode_init(lua_State *L) {
-    return luaL_error(L, "TODO base64_stream_encode_init");
+// LUAMOD_API int lib_func_stream_encode_init(lua_State *L) {
+//     return luaL_error(L, "TODO base64_stream_encode_init");
+// }
+
+// LUAMOD_API int lib_func_stream_encode(lua_State *L) {
+//     return luaL_error(L, "TODO base64_stream_encode");
+// }
+
+// LUAMOD_API int lib_func_stream_encode_final(lua_State *L) {
+//     return luaL_error(L, "TODO base64_stream_encode_final");
+// }
+
+// LUAMOD_API int lib_func_stream_decode_init(lua_State *L) {
+//     return luaL_error(L, "TODO base64_stream_decode_init");
+// }
+
+// LUAMOD_API int lib_func_stream_decode(lua_State *L) {
+//     return luaL_error(L, "TODO base64_stream_decode");
+// }
+
+LUAMOD_API int lib_func_md5(lua_State *L) {
+    const char *str;
+    size_t len;
+    boolean_t bin;
+
+    // unsigned char md[MD5_DIGEST_LENGTH];
+    unsigned char *md;
+    char         buf[MD5_DIGEST_LENGTH * 2];
+
+    str = luaL_checklstring(L, 1, &len);
+    bin = lua_toboolean(L, 2);
+
+    // MD5((const unsigned char *)str, len, md);
+    md = MD5((const unsigned char *)str, len, NULL);
+
+    if (bin) {
+        lua_pushlstring(L, (const char *)md, MD5_DIGEST_LENGTH);
+    } else {
+        for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+            sprintf(buf + i * 2, "%02x", md[i]);
+        }
+        lua_pushlstring(L, buf, MD5_DIGEST_LENGTH * 2);
+    }
+
+    return 1;
 }
 
-LUAMOD_API int lib_func_stream_encode(lua_State *L) {
-    return luaL_error(L, "TODO base64_stream_encode");
-}
+LUAMOD_API int lib_func_crc32(lua_State *L) {
+    const char *str;
+    size_t len;
 
-LUAMOD_API int lib_func_stream_encode_final(lua_State *L) {
-    return luaL_error(L, "TODO base64_stream_encode_final");
-}
+    str = luaL_checklstring(L, 1, &len);
+    lua_pushinteger(L, crc32(str, len));
 
-LUAMOD_API int lib_func_stream_decode_init(lua_State *L) {
-    return luaL_error(L, "TODO base64_stream_decode_init");
-}
-
-LUAMOD_API int lib_func_stream_decode(lua_State *L) {
-    return luaL_error(L, "TODO base64_stream_decode");
+    return 1;
 }
 
 static const luaL_Reg lib_funcs[] = {
-    {"set_codec",           lib_func_set_codec},
-    {"encode",              lib_func_encode},
-    {"decode",              lib_func_decode},
-    {"stream_encode_init",  lib_func_stream_encode_init},
-    {"stream_encode",       lib_func_stream_encode},
-    {"stream_encode_final", lib_func_stream_encode_final},
-    {"stream_decode_init",  lib_func_stream_decode_init},
-    {"stream_decode",       lib_func_stream_decode},
+    {"set_base64_codec",    lib_func_base64_set_codec},
+    {"encode_base64",       lib_func_base64_encode},
+    {"decode_base64",       lib_func_base64_decode},
+    {"base64_encode",       lib_func_base64_encode},
+    {"base64_decode",       lib_func_base64_decode},
+
+    // {"stream_encode_init",  lib_func_stream_encode_init},
+    // {"stream_encode",       lib_func_stream_encode},
+    // {"stream_encode_final", lib_func_stream_encode_final},
+    // {"stream_decode_init",  lib_func_stream_decode_init},
+    // {"stream_decode",       lib_func_stream_decode},
+
+    {"md5",                 lib_func_md5},
+    {"crc32",               lib_func_crc32},
     /* placeholders */
     // {"have",  NULL},
-    {"codec", NULL},
+    {"base64_codec", NULL},
     {NULL,    NULL}
 };
 
@@ -195,7 +242,7 @@ LUAMOD_API int luaopen_lbase64(lua_State *L) {
     luaL_newlib(L, lib_funcs);
 
     // REG_KV(have, boolean);
-    REG_KV(codec, integer);
+    REG_KV(base64_codec, integer);
 
     return 1;
 }

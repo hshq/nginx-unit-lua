@@ -2,6 +2,7 @@ local unit      = require 'lnginx-unit'
 local utils     = require 'utils'
 local ngx_const = require 'ngx.const'
 local ngx_proto = require 'ngx.proto'
+local ngx_todo  = require 'ngx.todo'
 
 local require      = require
 local setmetatable = setmetatable
@@ -79,7 +80,8 @@ local function make_ngx(cfg, req, link_num)
     }
 
     merge(ngx, ngx_const.ngx_const)
-    merge(ngx, (require 'ngx.proto'))
+    merge(ngx, ngx_proto)
+    merge(ngx, ngx_todo)
 
 
     -- TODO hsq 内部状态集中管理？或者按照功能拆分成子模块？
@@ -325,21 +327,25 @@ local function make_ngx(cfg, req, link_num)
 
 
     local contents = {}
-    ngx.print = function(...)
+    -- TODO hsq 如何立即返回部分内容？ ngx.flush(wait?)
+    local function ngx_print(...)
         -- resp_sent = true
         for _, v in ipairs{...} do
             if type(v) == 'table' then
-                ngx.print(v)
+                for _, v2 in ipairs(v) do
+                    ngx_print(v2)
+                end
             else
                 push(contents, tostring(v))
             end
         end
         return 1
     end
+    ngx.print = ngx_print
     ngx.say = function(...)
         -- resp_sent = true
-        ngx.print(...)
-        ngx.print('\n')
+        ngx_print(...)
+        ngx_print('\n')
         return 1
     end
     ngx.get_response_content = function()

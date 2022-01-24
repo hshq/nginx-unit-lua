@@ -9,7 +9,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "../deps/adapter.h"
+#include <adapter.h>
 
 
 #define MT_CONTEXT "lnginx-unit.context"
@@ -38,11 +38,6 @@
 #define REF2PTR(ref) ((void *)(ptrdiff_t)ref)
 #define PTR2REF(ptr) ((int)(ptrdiff_t)ptr)
 
-
-typedef enum boolean_e {
-    False = 0,
-    True,
-} boolean_t;
 
 typedef struct context_s {
     nxt_unit_ctx_t *ctx;
@@ -73,7 +68,6 @@ LUAMOD_API int lib_func_init(lua_State *);
 LUAMOD_API int lib_func_log(lua_State *);
 LUAMOD_API int lib_func_getpid(lua_State *);
 LUAMOD_API int lib_func_getppid(lua_State *);
-LUAMOD_API int lib_func_md5(lua_State *);
 
 LUAMOD_API int ctx_mtd_run(lua_State *);
 LUAMOD_API int ctx_mtd_done(lua_State *);

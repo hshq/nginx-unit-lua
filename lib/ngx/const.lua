@@ -1,3 +1,4 @@
+local cjson = require 'cjson'
 local unit  = require 'lnginx-unit'
 
 local tointeger = math.tointeger
@@ -57,7 +58,19 @@ local NGX_HTTP_STATUS = {
 }
 
 
-local ngx_const = {}
+local ngx_const = {
+    -- NULL light userdata
+    null = cjson.null,
+    -- NOTE hsq Nginx API for Lua 只用其中 3 个，如
+    --      ngx.exit 只用 OK ERROR DECLINED
+    -- NOTE hsq 建议只用 OK 和 ERROR
+    --      https://forum.openresty.us/d/4257-dc5f7368d6c0b220039fbbc71ed87bce
+    OK       = 0,
+    ERROR    = -1,
+    AGAIN    = -2,
+    DONE     = -4,
+    DECLINED = -5,
+}
 
 local logs = {}
 for level, name in pairs(NGX_LOG_LEVEL) do

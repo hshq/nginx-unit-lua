@@ -3,6 +3,11 @@
 
 #include <lua.h>
 
+typedef enum boolean_e {
+    False = 0,
+    True,
+} boolean_t;
+
 #if LUA_VERSION_NUM == 501
 
 #define LUAMOD_API LUA_API
