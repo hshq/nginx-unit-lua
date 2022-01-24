@@ -1,4 +1,3 @@
-// TODO hsq 改名字？或者合并？
 #define lib_codec_c
 #define LUA_LIB
 
@@ -12,6 +11,9 @@
 
 #include <openssl/md5.h>
 #include <gityf_crc/crc32.h>
+
+#include <time.h>
+#include <sys/time.h>
 
 
 #define AUTO_CODEC 0
@@ -207,6 +209,46 @@ LUAMOD_API int lib_func_crc32(lua_State *L) {
     return 1;
 }
 
+// TODO hsq FFI 实现更好：标准库的简单封装？
+LUAMOD_API int lib_func_parse_time(lua_State *L) {
+    const char *time;
+    const char *fmt;
+    struct tm tm;
+    time_t sec;
+
+    time = luaL_checkstring(L, 1);
+    fmt = luaL_checkstring(L, 2);
+    if (strptime(time, fmt, &tm)) {
+        sec = timegm(&tm);
+        lua_pushinteger(L, sec);
+    } else {
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+LUAMOD_API int lib_func_now(lua_State *L) {
+    struct timeval tp;
+    struct timezone tzp;
+    boolean_t all;
+    int rc;
+
+    all = lua_toboolean(L, 1);
+    rc = gettimeofday(&tp, all ? &tzp : NULL);
+    if (rc) return 0;
+    if (all) {
+        lua_pushinteger(L, tp.tv_sec);
+        lua_pushinteger(L, tp.tv_usec);
+        lua_pushinteger(L, tzp.tz_minuteswest);
+        lua_pushboolean(L, tzp.tz_dsttime);
+        return 4;
+    } else {
+        lua_pushnumber(L, tp.tv_sec + tp.tv_usec / 1000000.0);
+        return 1;
+    }
+}
+
 static const luaL_Reg lib_funcs[] = {
     {"set_base64_codec",    lib_func_base64_set_codec},
     {"encode_base64",       lib_func_base64_encode},
@@ -222,6 +264,8 @@ static const luaL_Reg lib_funcs[] = {
 
     {"md5",                 lib_func_md5},
     {"crc32",               lib_func_crc32},
+    {"parse_time",          lib_func_parse_time},
+    {"now",                 lib_func_now},
     /* placeholders */
     // {"have",  NULL},
     {"base64_codec", NULL},

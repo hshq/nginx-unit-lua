@@ -78,6 +78,10 @@ function funcs.save()
     write_file(CFG_FILE, prettify)
 end
 
+-- curl -s -X PUT \
+--     --unix-socket /usr/local/var/run/unit/control.sock \
+--     --data-binary '{ "pass": "routes/lor" }' \
+--     'http://localhost:8888/config/listeners/*:8888/'
 function funcs.config()
     funcs.save()
     local cmd = join({

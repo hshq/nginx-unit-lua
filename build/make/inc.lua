@@ -1,8 +1,8 @@
 -- NOTE hsq 参考 lpeg 库
 
--- NOTE hsq 只是为了避免语言服务器警告
 -- TODO hsq 推广这种导入方法？ use(mod, '...') use'...' of 'mod' ？
 --      以及用于 _G 和 内置库？搜索 _ENV
+-- NOTE hsq 只是为了避免语言服务器警告
 -- local join, push, map, merge, cmd = _ENV('join, push, map, merge, cmd')
 local I, L, lib, sh, cmd          = _ENV('I, L, lib, sh, cmd')
 local INC_DIRS, LD_DIRS, LIBS     = _ENV('INC_DIRS, LD_DIRS, LIBS')
