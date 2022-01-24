@@ -40,7 +40,7 @@ local function parse_http_time(str)
     return parse_time(str, PARSE_HTTP_FMT)
 end
 
--- {{{ TODO hsq 缓冲时间，自动或手动更新，无系统调用
+-- {{{ TODO hsq 缓冲时间，自动或手动更新，无系统调用；检查调用处。
 --      unit 似乎有类似实现，搜索 nxt_thread_time_update
 
 -- 强制更新时间缓冲，慎用
@@ -109,7 +109,6 @@ local function escape_header_v(v)
     return (tostring(v):gsub('.', char2escape_header_v))
 end
 
--- newstr = ngx.escape_uri(str, type?)
 -- @typ? 2: 作为 URI 部件, 0: 作为完整 URI
 local function escape_uri(str, typ)
     if not typ or typ == 2 then
@@ -118,7 +117,6 @@ local function escape_uri(str, typ)
         return (str:gsub('.', char2escape_uri_f))
     end
 end
--- newstr = ngx.unescape_uri(str)
 -- @str 已转义的 URI 部件
 local function unescape_uri(str)
     -- 无效转义序列： % 和 不该出现在已转义字串中的字符不变：
@@ -184,6 +182,59 @@ local function md5_bin(str)
 end
 
 
+-- TODO hsq 多进程共享；更高性能的实现；独立模块？
+local shared = {}
+
+local stores = {}
+local timers = {} -- expire_at
+
+local dict_meta
+dict_meta = {
+    -- value, flags = ngx.shared.DICT:get(key)
+    get = function (t, k)
+        if type(k) ~= 'string' then return false, 'Invalid Key Type' end
+        local v = stores[t][k]
+        if v then
+            local expire_at = timers[t][k]
+            if expire_at and expire_at <= now() then
+                v = nil
+                stores[t][k] = nil
+                timers[t][k] = nil
+            end
+        end
+        return v
+    end,
+    -- success, err, forcible = ngx.shared.DICT:set(key, value, exptime?, flags?)
+    set = function (t, k, v, expire)
+        -- TODO hsq 增加时检查占用量；如何定时检查过期？
+        if type(k) ~= 'string' then return false, 'Invalid Key Type' end
+        stores[t][k] = v
+        timers[t][k] = (v ~= nil and expire > 0) and now() + expire or nil
+        return true
+    end,
+    __index = function(t, k)
+        local function todo(...)
+            return nil, 'TODO hsq: ngx.shared:' .. k
+        end
+        return dict_meta[k] or todo
+    end,
+}
+setmetatable(shared, {
+    __index = function(t, k)
+        -- TODO hsq 隐藏 ngx.shared_dict
+        if not ngx.shared_dict[k] then
+            return nil
+        end
+        local dict, store, timer = {}, {}, {}
+        stores[dict] = store
+        timers[dict] = timer
+        setmetatable(dict, dict_meta)
+        t[k] = dict
+        return dict
+    end,
+})
+
+
 return {
     -- TODO hsq 不经过 utils ，直接引入？
     decode_base64 = utils.decode_base64,
@@ -214,4 +265,6 @@ return {
 
     log         = log,
     get_phase   = get_phase,
+
+    shared = shared,
 }

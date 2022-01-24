@@ -15,8 +15,10 @@ local tostring     = tostring
 local tointeger    = math.tointeger
 local lower        = string.lower
 
-local log_err = unit.err
-local log_warn = unit.warn
+local log_alert = unit.alert
+local log_err   = unit.err
+local log_warn  = unit.warn
+local log_debug = unit.debug
 
 local cap_mtds_id2name    = ngx_const.cap_mtds_id2name
 local http_status_id2name = ngx_const.http_status_id2name
@@ -47,6 +49,14 @@ local MAX_ARGS             = 100
 -- 子请求嵌套上限
 local HTTP_MAX_SUBREQUESTS = 50
 
+local MIN_SHARED_DICT      = '8k'
+
+local UNITS = {
+    k = 2^10, K = 2^10,
+    m = 2^20, M = 2^20,
+    -- g = 2^30, G = 2^30,
+}
+
 
 local pid  = unit.getpid()
 local ppid = unit.getppid()
@@ -56,6 +66,21 @@ local function init_ngx(ngx_conf)
     DEFAULT_ROOT         = ngx_conf.DEFAULT_ROOT         or DEFAULT_ROOT
     MAX_ARGS             = ngx_conf.MAX_ARGS             or MAX_ARGS
     HTTP_MAX_SUBREQUESTS = ngx_conf.HTTP_MAX_SUBREQUESTS or HTTP_MAX_SUBREQUESTS
+    MIN_SHARED_DICT      = ngx_conf.MIN_SHARED_DICT      or MIN_SHARED_DICT
+
+    assert(type(DEFAULT_ROOT) == 'string')
+    assert(type(MAX_ARGS) == 'number' and MAX_ARGS >= 0)
+    assert(type(HTTP_MAX_SUBREQUESTS) == 'number' and HTTP_MAX_SUBREQUESTS >= 0)
+    assert(type(MIN_SHARED_DICT) == 'string')
+end
+
+local function calc_kmg(str)
+    local val, uni = str:match('^(%d+)([kKmMgG])$')
+    val = tointeger(tonumber(val))
+    uni = uni and UNITS[uni]
+    val = val and uni and val * uni
+    assert(val and val >= 0, 'Invalid shared_dict configuration')
+    return val
 end
 
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
@@ -65,8 +90,8 @@ local function make_ngx(cfg, req, link_num)
     readonly(req)
 
     link_num = (link_num or 0)
-    if link_num >= HTTP_MAX_SUBREQUESTS then
-        unit.err('subrequests cycle while processing "%s"', req.path)
+    if link_num > HTTP_MAX_SUBREQUESTS then
+        log_err('subrequests cycle while processing "%s"', req.path)
         return error('request was aborted', 2)
     end
     link_num = link_num + 1
@@ -85,13 +110,24 @@ local function make_ngx(cfg, req, link_num)
 
 
     -- TODO hsq 内部状态集中管理？或者按照功能拆分成子模块？
-    local status
+    local status = ngx.HTTP_OK
     local resp_sent   = false
     -- 0-未处理，1-已读，2-已丢弃
     local body_status = 0
 
     local ngx_req = {}
     ngx.req = ngx_req
+
+    local shared_dict = {}
+    local min_shared_dict = calc_kmg(MIN_SHARED_DICT)
+    if (cfg.shared_dict) then
+        for k, v in pairs(cfg.shared_dict) do
+            v = calc_kmg(v)
+            v = v < min_shared_dict and min_shared_dict or v
+            shared_dict[k] = v
+        end
+    end
+    ngx.shared_dict = shared_dict
 
     -- http://nginx.org/en/docs/http/ngx_http_core_module.html#variables
     local sys_vars = { -- 必须先定义。有字段，也可有数组部分。
@@ -113,9 +149,9 @@ local function make_ngx(cfg, req, link_num)
     local headers,   headers_msg,   headers_limit,  headers_flag
     local function set_user_var(k, v)
         if type(v) ~= 'string' then
-            unit.alert('set_user_var(%s, %s) 值参数(#2) 必须是字符串。', k, type(v))
+            log_alert('set_user_var(%s, %s) 值参数(#2) 必须是字符串。', k, type(v))
         elseif sys_vars[k] then
-            unit.alert('variable "%s" not changeable', k)
+            log_alert('variable "%s" not changeable', k)
         else
             user_vars[k] = v
             return true
@@ -132,7 +168,7 @@ local function make_ngx(cfg, req, link_num)
             local n = k:match('^arg_([%w_]+)$')
             if n then
                 if not uri_args then
-                    ngx.req.get_uri_args()
+                    ngx_req.get_uri_args()
                 end
                 v = uri_args[n]
                 if v then return v end
@@ -160,7 +196,7 @@ local function make_ngx(cfg, req, link_num)
                 uri_args = nil
             -- elseif k == 'limit_rate' then
             elseif not set_user_var(k, v) then
-                unit.alert('variable "%s" does not exist', k)
+                log_alert('variable "%s" does not exist', k)
             end
         end,
     })
@@ -189,7 +225,7 @@ local function make_ngx(cfg, req, link_num)
             headers_num, headers, headers_flag = req.request:fields(max_headers)
             -- TODO hsq 检查 req.headers 是否 skip/hopbyhop
             if next(headers_flag) then
-                unit.alert((require 'inspect'){
+                log_alert((require 'inspect'){
                     headers      = headers,
                     headers_flag = headers_flag,
                 })
@@ -281,7 +317,8 @@ local function make_ngx(cfg, req, link_num)
         end,
         __newindex = function(t, k, v)
             if resp_sent then
-                unit.err('attempt to set ngx.header after sending out response headers')
+                log_warn('attempt to set ngx.header[%q] = %q after sending out response headers', k, v)
+                -- return ngx.exit(ngx.HTTP_OK)
                 return
             end
             k = normalize_header(tostring(k))
@@ -320,7 +357,7 @@ local function make_ngx(cfg, req, link_num)
         end
         -- setmetatable(resp_headers, {
         --     __newindex = function(t, k, v)
-        --         unit.alert('响应标头已发出，不可更改。')
+        --         log_alert('响应标头已发出，不可更改。')
         --     end
         -- })
         return vec
@@ -443,7 +480,7 @@ local function make_ngx(cfg, req, link_num)
         sub_req.path   = path
         sub_req.query  = query
         sub_req.target = target
-        -- unit.debug((require 'inspect')(sub_req))
+        -- log_debug((require 'inspect')(sub_req))
 
         local sub_ngx = make_ngx(cfg, sub_req, link_num)
         if ctx then sub_ngx.ctx = ctx end
@@ -467,6 +504,7 @@ local function make_ngx(cfg, req, link_num)
         return res
     end
 
+
     return setmetatable(ngx, {
         __index = function(t, k)
             if k == 'status' then
@@ -481,17 +519,17 @@ local function make_ngx(cfg, req, link_num)
         __newindex = function(t, k, v)
             if k == 'status' then
                 if resp_sent then
-                    unit.err('attempt to set ngx.status after sending out response headers')
+                    log_warn('attempt to set ngx.status = %q after sending out response headers', v)
                 else
                     assert(not v or http_status_id2name[v])
                     status = v
                 end
-                return
             elseif k == 'ctx' then
                 assert(type(v) == 'table', 'ngx.ctx must be a table')
                 t.ctx = v
+            else
+                log_err('未实现 < ngx.%s = ... >', k)
             end
-            log_err('未实现 < ngx.%s = ... >', k)
         end,
     })
 end
