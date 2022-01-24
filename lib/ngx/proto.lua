@@ -15,7 +15,6 @@ local logs          = ngx_const.logs
 local push  = utils.push
 local join  = utils.join
 local md5   = utils.md5
-local crc32 = utils.crc32
 
 
 -- NOTE hsq strftime
@@ -116,8 +115,14 @@ end
 
 
 return {
+    -- TODO hsq 不经过 utils ，直接引入？
     decode_base64 = utils.decode_base64,
     encode_base64 = utils.encode_base64,
+    md5           = md5,
+    md5_bin       = md5_bin,
+    crc32         = utils.crc32,
+    crc32_short   = utils.crc32,
+    crc32_long    = utils.crc32,
 
     time      = os.time,
     http_time = http_time,
@@ -130,10 +135,4 @@ return {
 
     log         = log,
     get_phase   = get_phase,
-
-    md5         = md5,
-    md5_bin     = md5_bin,
-    crc32       = crc32,
-    crc32_short = crc32,
-    crc32_long  = crc32,
 }

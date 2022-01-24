@@ -26,9 +26,8 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
     - [lua-cjson](https://github.com/openresty/lua-cjson)
     - [base64](https://github.com/aklomp/base64)
 
-2.  编译 `base64` ：
-    1. ``` cd build/deps ```
-        - 解压 [base64](https://github.com/aklomp/base64) 源码包，
+2.  编译 `build/deps/base64` ：
+    1.  - 解压 `build/deps/` 中的 [base64](https://github.com/aklomp/base64) 源码包，
         - `MacOS`: 修改 `./Makefile` ，注释掉目标 `lib/libbase64.o` 下的 `$(OBJCOPY)` 指令，
         - （ MacOS 中会导致编译失败、运行失败，找不到符号。）
     2. ```

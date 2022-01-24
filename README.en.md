@@ -26,9 +26,8 @@ And several application processes, and various processes communicate with each o
     - [lua-cjson](https://github.com/openresty/lua-cjson)
     - [base64](https://github.com/aklomp/base64)
 
-2.  Compile `base64` :
-    1. ``` cd build/deps ```
-        - Unzip [base64](https://github.com/aklomp/base64) Source package in `deps/`,
+2.  Compile `build/deps/base64` :
+    1.  - Unzip [base64](https://github.com/aklomp/base64) Source package in `build/deps/`,
         - `MacOS`: modify `./Makefile`, comment out the `$(OBJCOPY)` instruction under the target `lib/libbase64.o`,
         - (In MacOS, it will cause compilation failure, operation failure and symbol not found.)
     2. ```

@@ -25,7 +25,7 @@ local inc_file = './make/inc.lua'
 local ver = _VERSION:match('^Lua (.+)$')
 
 local libs = {
-    'lbase64',
+    'lcodec',
     'lnginx-unit',
 }
 

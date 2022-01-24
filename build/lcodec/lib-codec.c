@@ -1,5 +1,5 @@
 // TODO hsq 改名字？或者合并？
-#define lib_base64_c
+#define lib_codec_c
 #define LUA_LIB
 
 #include <lua.h>
@@ -8,7 +8,7 @@
 #include <base64/lib/config.h>
 #include <base64/include/libbase64.h>
 
-#include "lib-base64.h"
+#include "lib-codec.h"
 
 #include <openssl/md5.h>
 #include <gityf_crc/crc32.h>
@@ -150,23 +150,23 @@ LUAMOD_API int lib_func_base64_decode(lua_State *L) {
     return 1;
 }
 
-// LUAMOD_API int lib_func_stream_encode_init(lua_State *L) {
+// LUAMOD_API int lib_func_base64_stream_encode_init(lua_State *L) {
 //     return luaL_error(L, "TODO base64_stream_encode_init");
 // }
 
-// LUAMOD_API int lib_func_stream_encode(lua_State *L) {
+// LUAMOD_API int lib_func_base64_stream_encode(lua_State *L) {
 //     return luaL_error(L, "TODO base64_stream_encode");
 // }
 
-// LUAMOD_API int lib_func_stream_encode_final(lua_State *L) {
+// LUAMOD_API int lib_func_base64_stream_encode_final(lua_State *L) {
 //     return luaL_error(L, "TODO base64_stream_encode_final");
 // }
 
-// LUAMOD_API int lib_func_stream_decode_init(lua_State *L) {
+// LUAMOD_API int lib_func_base64_stream_decode_init(lua_State *L) {
 //     return luaL_error(L, "TODO base64_stream_decode_init");
 // }
 
-// LUAMOD_API int lib_func_stream_decode(lua_State *L) {
+// LUAMOD_API int lib_func_base64_stream_decode(lua_State *L) {
 //     return luaL_error(L, "TODO base64_stream_decode");
 // }
 
@@ -214,11 +214,11 @@ static const luaL_Reg lib_funcs[] = {
     {"base64_encode",       lib_func_base64_encode},
     {"base64_decode",       lib_func_base64_decode},
 
-    // {"stream_encode_init",  lib_func_stream_encode_init},
-    // {"stream_encode",       lib_func_stream_encode},
-    // {"stream_encode_final", lib_func_stream_encode_final},
-    // {"stream_decode_init",  lib_func_stream_decode_init},
-    // {"stream_decode",       lib_func_stream_decode},
+    // {"stream_encode_init",  lib_func_base64_stream_encode_init},
+    // {"stream_encode",       lib_func_base64_stream_encode},
+    // {"stream_encode_final", lib_func_base64_stream_encode_final},
+    // {"stream_decode_init",  lib_func_base64_stream_decode_init},
+    // {"stream_decode",       lib_func_base64_stream_decode},
 
     {"md5",                 lib_func_md5},
     {"crc32",               lib_func_crc32},
@@ -238,7 +238,7 @@ static const luaL_Reg lib_funcs[] = {
     lua_setfield(L, -2, #VEC); \
 }
 
-LUAMOD_API int luaopen_lbase64(lua_State *L) {
+LUAMOD_API int luaopen_lcodec(lua_State *L) {
     luaL_newlib(L, lib_funcs);
 
     // REG_KV(have, boolean);

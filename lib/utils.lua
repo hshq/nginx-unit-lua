@@ -6,7 +6,7 @@ local merge = base.merge
 local _M = {}
 
 merge(_M, base)
-merge(_M, (require 'lbase64'))
+merge(_M, (require 'lcodec'))
 -- NOTE hsq auto 可能使用 neon32/neon64 导致编解码失败。
 _M.set_base64_codec(_M.base64_codec.avx2)
 
