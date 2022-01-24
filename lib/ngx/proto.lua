@@ -11,6 +11,7 @@ local os_date  = os.date
 
 local NGX_LOG_LEVEL = ngx_const.NGX_LOG_LEVEL
 local logs          = ngx_const.logs
+local null          = ngx_const.null
 
 local push       = utils.push
 local join       = utils.join
@@ -73,13 +74,15 @@ end
 
 -- NOTE 转义字符范围，从 openresty 响应头实验中汇集。
 local escape_charset = {
-    [0] = '21,23-27,2A,2B,2D,2E,30-39,41-5A,5E-7A,7C,7E',   -- 都不转
-    [1] = '9,20,22,28-29,2C,2F,3A-40,5B-5D,7B,7D,80-FF',    -- 只 K 转
-    [2] = '0-8,A-1F,7F',                                    -- KV 都转
-    K   = '0-20,22,28-29,2C,2F,3A-40,5B-5D,7B,7D,7F-FF',    -- K 转
-    V   = '0-8,A-1F,7F',                                    -- V 转
+    [0] = '21,23-27,2A,2B,2D,2E,30-39,41-5A,5E-7A,7C,7E',   -- header: 都不转
+    [1] = '9,20,22,28-29,2C,2F,3A-40,5B-5D,7B,7D,80-FF',    -- header: 只 K 转
+    [2] = '0-8,A-1F,7F',                                    -- header: KV 都转
+    H_K = '0-20,22,28-29,2C,2F,3A-40,5B-5D,7B,7D,7F-FF',    -- header: K 转
+    H_V = '0-8,A-1F,7F',                                    -- header: V 转
+
+    U_F = '0-1F,20,23,25,3F,7F-FF',                             -- 完整 URI
+    U_C = '0-1F,20,22-26,2B,2C,2F,3A-40,5B-5E,60,7B-7D,7F-FF',  -- URI 部件
 }
-local escape_charset_v = {}
 local function char2escape(charset)
     local c2e = {}
     charset:gsub('[^,]+', function(set)
@@ -92,14 +95,36 @@ local function char2escape(charset)
     end)
     return c2e
 end
-local char2escape_k = char2escape(escape_charset.K)
-local char2escape_v = char2escape(escape_charset.V)
+local char2escape_header_k = char2escape(escape_charset.H_K)
+local char2escape_header_v = char2escape(escape_charset.H_V)
+local char2escape_uri_f = char2escape(escape_charset.U_F)
+local char2escape_uri_c = char2escape(escape_charset.U_C)
 
-local function escape_k(k)
-    return (k:gsub('.', char2escape_k)) -- 只返回首值
+-- NOTE hsq 注意 gsub 返回匹配数作为第二个结果
+
+local function escape_header_k(k)
+    return (k:gsub('.', char2escape_header_k))
 end
-local function escape_v(v)
-    return (tostring(v):gsub('.', char2escape_v)) -- 只返回首值
+local function escape_header_v(v)
+    return (tostring(v):gsub('.', char2escape_header_v))
+end
+
+-- newstr = ngx.escape_uri(str, type?)
+-- @typ? 2: 作为 URI 部件, 0: 作为完整 URI
+local function escape_uri(str, typ)
+    if not typ or typ == 2 then
+        return (str:gsub('.', char2escape_uri_c))
+    elseif typ == 0 then
+        return (str:gsub('.', char2escape_uri_f))
+    end
+end
+-- newstr = ngx.unescape_uri(str)
+-- @str 已转义的 URI 部件
+local function unescape_uri(str)
+    -- 无效转义序列： % 和 不该出现在已转义字串中的字符不变：
+    return (str:gsub('+', ' '):gsub('%%([0-9a-fA-F])([0-9a-fA-F])', function(a, b)
+        return char(tonumber(a, 16) * 16 + tonumber(b, 16))
+    end))
 end
 
 local function normalize_header(name)
@@ -117,7 +142,7 @@ local function encode_args(args)
     local buf = {}
     for k, v in pairs(args) do
         assert(type(k) == 'string', 'Invalid KEY type')
-        k = escape_k(k)
+        k = escape_uri(k)
         -- {k = true} -> k
         -- {k = false} ->
         if v == true then
@@ -126,12 +151,12 @@ local function encode_args(args)
             local v_t = type(v)
             -- {k = str|num} -> k=v
             if v_t == 'string' or v_t == 'number' then
-                 push(buf, ('%s=%s'):format(k, escape_v(v)))
+                 push(buf, ('%s=%s'):format(k, escape_uri(v)))
             elseif v_t == 'table' then
                 -- {k = {v1, v2...}} -> k=v1&k=v2...
                 -- {k = {}} ->
                 for _, v2 in ipairs(v) do
-                    push(buf, ('%s=%s'):format(k, escape_v(v2)))
+                    push(buf, ('%s=%s'):format(k, escape_uri(v2)))
                 end
             end
         end
@@ -179,8 +204,10 @@ return {
     cookie_time = cookie_time,
     parse_http_time = parse_http_time,
 
-    escape_k         = escape_k,
-    escape_v         = escape_v,
+    escape_header_k  = escape_header_k,
+    escape_header_v  = escape_header_v,
+    escape_uri       = escape_uri,
+    unescape_uri     = unescape_uri,
     normalize_header = normalize_header,
     flatten_header   = flatten_header,
     encode_args      = encode_args,

@@ -20,8 +20,8 @@ local log_warn = unit.warn
 
 local cap_mtds_id2name    = ngx_const.cap_mtds_id2name
 local http_status_id2name = ngx_const.http_status_id2name
-local escape_k            = ngx_proto.escape_k
-local escape_v            = ngx_proto.escape_v
+local escape_header_k     = ngx_proto.escape_header_k
+local escape_header_v     = ngx_proto.escape_header_v
 local normalize_header    = ngx_proto.normalize_header
 -- local flatten_header      = ngx_proto.flatten_header
 local encode_args         = ngx_proto.encode_args
@@ -275,7 +275,8 @@ local function make_ngx(cfg, req, link_num)
     ngx.header = setmetatable({}, {
         __index = function(t, k)
             k = normalize_header(tostring(k))
-            k = escape_k(k)
+            k = escape_header_k(k)
+            -- TODO hsq v 是否需要反转义？
             return resp_headers[k]
         end,
         __newindex = function(t, k, v)
@@ -284,7 +285,7 @@ local function make_ngx(cfg, req, link_num)
                 return
             end
             k = normalize_header(tostring(k))
-            k = escape_k(k)
+            k = escape_header_k(k)
             if v == nil or (type(v) == 'table' and #v == 0) then
                 resp_headers[k] = nil
                 return
@@ -296,9 +297,9 @@ local function make_ngx(cfg, req, link_num)
             -- TODO hsq 多值可以分开传输，也可以(先各自转义再)合并(，并用逗号分隔)。
             -- local v0 = resp_headers[k]
             if type(v) == 'table' then
-                map(map(v, tostring), escape_v)
+                map(map(v, tostring), escape_header_v)
             else
-                v = escape_v(tostring(v))
+                v = escape_header_v(tostring(v))
             end
             resp_headers[k] = v
         end,
