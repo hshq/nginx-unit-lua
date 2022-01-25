@@ -2,7 +2,6 @@ local unit      = require 'lnginx-unit'
 local utils     = require 'utils'
 local ngx_const = require 'ngx.const'
 local ngx_proto = require 'ngx.proto'
-local ngx_todo  = require 'ngx.todo'
 
 local require      = require
 local setmetatable = setmetatable
@@ -18,7 +17,7 @@ local lower        = string.lower
 local log_alert = unit.alert
 local log_err   = unit.err
 local log_warn  = unit.warn
-local log_debug = unit.debug
+-- local log_debug = unit.debug
 
 local cap_mtds_id2name    = ngx_const.cap_mtds_id2name
 local http_status_id2name = ngx_const.http_status_id2name
@@ -29,7 +28,6 @@ local normalize_header    = ngx_proto.normalize_header
 local encode_args         = ngx_proto.encode_args
 
 local push       = utils.push
-local pop        = utils.pop
 local join       = utils.join
 -- local clear      = utils.clear
 local map        = utils.map
@@ -104,9 +102,7 @@ local function make_ngx(cfg, req, link_num)
         -- ctx = {}, -- 请求上下文，普通表，可覆盖；按需初始化
     }
 
-    merge(ngx, ngx_const.ngx_const)
     merge(ngx, ngx_proto)
-    merge(ngx, ngx_todo)
 
 
     -- TODO hsq 内部状态集中管理？或者按照功能拆分成子模块？

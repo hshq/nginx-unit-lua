@@ -217,7 +217,7 @@ LUAMOD_API int lib_func_parse_time(lua_State *L) {
     time_t sec;
 
     time = luaL_checkstring(L, 1);
-    fmt = luaL_checkstring(L, 2);
+    fmt  = luaL_checkstring(L, 2);
     if (strptime(time, fmt, &tm)) {
         sec = timegm(&tm);
         lua_pushinteger(L, sec);
@@ -228,6 +228,7 @@ LUAMOD_API int lib_func_parse_time(lua_State *L) {
     return 1;
 }
 
+// TODO hsq 时间类函数放在别处更好。
 LUAMOD_API int lib_func_now(lua_State *L) {
     struct timeval tp;
     struct timezone tzp;
@@ -235,7 +236,7 @@ LUAMOD_API int lib_func_now(lua_State *L) {
     int rc;
 
     all = lua_toboolean(L, 1);
-    rc = gettimeofday(&tp, all ? &tzp : NULL);
+    rc  = gettimeofday(&tp, all ? &tzp : NULL);
     if (rc) return 0;
     if (all) {
         lua_pushinteger(L, tp.tv_sec);
