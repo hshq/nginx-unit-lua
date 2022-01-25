@@ -91,6 +91,25 @@ for k, n in pairs(NGX_HTTP_STATUS) do
     ngx_const['HTTP_' .. k] = n
 end
 
+
+local UNITS = {
+    k = 2^10, K = 2^10,
+    m = 2^20, M = 2^20,
+    -- g = 2^30, G = 2^30,
+}
+
+local function calc_units(str)
+    local val, uni = str:match('^(%d+)([kKmMgG])$')
+    val = tointeger(tonumber(val))
+    uni = uni and UNITS[uni]
+    val = val and uni and val * uni
+    if not val or val < 0 then
+        error(('Invalid configuration: %s'):format(str), 2)
+    end
+    return val
+end
+
+
 return {
     NGX_LOG_LEVEL = NGX_LOG_LEVEL,
 
@@ -99,4 +118,6 @@ return {
     logs                = logs,
     cap_mtds_id2name    = cap_mtds_id2name,
     http_status_id2name = http_status_id2name,
+
+    calc_units = calc_units,
 }

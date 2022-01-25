@@ -1,9 +1,13 @@
+local ngx_const    = require 'ngx.const'
 local ngx_datetime = require 'ngx.datetime'
 
-local now = ngx_datetime.now
+local calc_units = ngx_const.calc_units
+local now        = ngx_datetime.now
 
 local type = type
 
+
+local config = {}
 
 -- TODO hsq 多进程共享；更高性能的实现；
 local shared = {}
@@ -44,8 +48,7 @@ dict_meta = {
 }
 setmetatable(shared, {
     __index = function(t, k)
-        -- TODO hsq 隐藏 ngx.shared_dict
-        if not ngx.shared_dict[k] then
+        if not config[k] then
             return nil
         end
         local dict, store, timer = {}, {}, {}
@@ -57,6 +60,16 @@ setmetatable(shared, {
     end,
 })
 
-return {
-    shared = shared
-}
+local function init(cfg)
+    local min_shared_dict = calc_units(cfg.MIN_SHARED_DICT)
+    if (cfg.shared_dict) then
+        for k, v in pairs(cfg.shared_dict) do
+            v = calc_units(v)
+            v = v < min_shared_dict and min_shared_dict or v
+            config[k] = v
+        end
+    end
+    return shared
+end
+
+return init

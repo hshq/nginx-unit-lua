@@ -1,7 +1,6 @@
 -- 无状态函数原型
-local utils        = require 'utils'
-local ngx_const    = require 'ngx.const'
-local ngx_shared   = require 'ngx.shared'
+local utils     = require 'utils'
+local ngx_const = require 'ngx.const'
 
 local type  = type
 local join  = utils.join
@@ -29,8 +28,6 @@ local _M = {
     normalize_header = utils.normalize_header,
     flatten_header   = utils.flatten_header,
     encode_args      = utils.encode_args,
-
-    shared = ngx_shared.shared,
 }
 
 merge(_M, ngx_const.ngx_const)

@@ -37,49 +37,9 @@ local readonly   = utils.readonly
 local parseQuery = utils.parseQuery
 
 
-local DEFAULT_ROOT         = 'html'
-
--- 为避免 DOS 攻击
--- NOTE hsq 所影响的若干方法，同一方法若以不同数量限制调用，结果不同，实没必要，
---      尽量只调用一次，或者使用同样的限制。
-local MAX_ARGS             = 100
-
--- 子请求嵌套上限
-local HTTP_MAX_SUBREQUESTS = 50
-
-local MIN_SHARED_DICT      = '8k'
-
-local UNITS = {
-    k = 2^10, K = 2^10,
-    m = 2^20, M = 2^20,
-    -- g = 2^30, G = 2^30,
-}
-
-
 local pid  = unit.getpid()
 local ppid = unit.getppid()
 
-
-local function init_ngx(ngx_conf)
-    DEFAULT_ROOT         = ngx_conf.DEFAULT_ROOT         or DEFAULT_ROOT
-    MAX_ARGS             = ngx_conf.MAX_ARGS             or MAX_ARGS
-    HTTP_MAX_SUBREQUESTS = ngx_conf.HTTP_MAX_SUBREQUESTS or HTTP_MAX_SUBREQUESTS
-    MIN_SHARED_DICT      = ngx_conf.MIN_SHARED_DICT      or MIN_SHARED_DICT
-
-    assert(type(DEFAULT_ROOT) == 'string')
-    assert(type(MAX_ARGS) == 'number' and MAX_ARGS >= 0)
-    assert(type(HTTP_MAX_SUBREQUESTS) == 'number' and HTTP_MAX_SUBREQUESTS >= 0)
-    assert(type(MIN_SHARED_DICT) == 'string')
-end
-
-local function calc_kmg(str)
-    local val, uni = str:match('^(%d+)([kKmMgG])$')
-    val = tointeger(tonumber(val))
-    uni = uni and UNITS[uni]
-    val = val and uni and val * uni
-    assert(val and val >= 0, 'Invalid shared_dict configuration')
-    return val
-end
 
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
 --      需要注意隔离请求私有数据，如 ngx_req
@@ -88,21 +48,20 @@ local function make_ngx(cfg, req, link_num)
     readonly(req)
 
     link_num = (link_num or 0)
-    if link_num > HTTP_MAX_SUBREQUESTS then
+    if link_num > cfg.HTTP_MAX_SUBREQUESTS then
         log_err('subrequests cycle while processing "%s"', req.path)
         return error('request was aborted', 2)
     end
     link_num = link_num + 1
 
     local ngx = {
-        config = {
-            prefix = function() return cfg.prefix end,
-        },
+        config = cfg,
         -- TODO hsq ngx.ctx 没意义？因 unit 没有多 phase ？
         -- ctx = {}, -- 请求上下文，普通表，可覆盖；按需初始化
     }
 
     merge(ngx, ngx_proto)
+    ngx.shared = (require 'ngx.shared')(cfg)
 
 
     -- TODO hsq 内部状态集中管理？或者按照功能拆分成子模块？
@@ -114,17 +73,6 @@ local function make_ngx(cfg, req, link_num)
     local ngx_req = {}
     ngx.req = ngx_req
 
-    local shared_dict = {}
-    local min_shared_dict = calc_kmg(MIN_SHARED_DICT)
-    if (cfg.shared_dict) then
-        for k, v in pairs(cfg.shared_dict) do
-            v = calc_kmg(v)
-            v = v < min_shared_dict and min_shared_dict or v
-            shared_dict[k] = v
-        end
-    end
-    ngx.shared_dict = shared_dict
-
     -- http://nginx.org/en/docs/http/ngx_http_core_module.html#variables
     local sys_vars = { -- 必须先定义。有字段，也可有数组部分。
         server_protocol = req.version,
@@ -132,7 +80,7 @@ local function make_ngx(cfg, req, link_num)
         host            = req.server_name,
         server_port     = req.server_port,
         remote_addr     = req.remote,
-        document_root   = cfg.prefix .. '/' .. DEFAULT_ROOT,
+        document_root   = cfg.prefix() .. '/' .. cfg.DEFAULT_ROOT,
         uri             = req.path,
         request_uri     = req.target,   -- uri?query_string
         query_string    = req.query,
@@ -214,7 +162,7 @@ local function make_ngx(cfg, req, link_num)
     -- TODO hsq ngx.resp.get_headers ？与 req 相同。
     -- max_headers?, raw?
     ngx_req.get_headers = function(max_headers, raw)
-        max_headers = max_headers or MAX_ARGS
+        max_headers = max_headers or cfg.MAX_ARGS
         -- assert(max_headers <= 0 or req.fields_count <= max_headers)
         if not headers or max_headers ~= headers_limit then
             local headers_num
@@ -246,7 +194,7 @@ local function make_ngx(cfg, req, link_num)
     end
 
     local function get_XX_args(args_str, max_args)
-        max_args = tointeger(max_args or MAX_ARGS)
+        max_args = tointeger(max_args or cfg.MAX_ARGS)
         if not max_args then
             return nil, 'invalid max_args'
         end
@@ -530,7 +478,4 @@ local function make_ngx(cfg, req, link_num)
     })
 end
 
-return {
-    init_ngx = init_ngx,
-    make_ngx = make_ngx,
-}
+return make_ngx

@@ -37,12 +37,10 @@ end
 local app_config = assert(unit_config and unit_config.app, 'invalid config')
 _G.DEBUG = app_config.DEBUG
 
-local unit    = require 'lnginx-unit'
-local ngx_mod = require 'ngx'
-local utils   = require 'utils'
+local unit     = require 'lnginx-unit'
+local make_ngx = require 'ngx'
 
-ngx_mod.init_ngx(unit_config.ngx)
-local make_ngx = ngx_mod.make_ngx
+local ngx_cfg = (require 'ngx.config')(unit_config)
 
 
 -- -- 测试
@@ -69,7 +67,13 @@ local function request_handler(req)
     -- unit.debug((require 'inspect')(req))
 
 
-    _G.ngx = make_ngx(app_config, req)
+    _G.ngx = make_ngx(ngx_cfg, req)
+
+
+    -- -- 测试
+    -- unit.debug((require 'inspect'){ngx.req.get_headers(nil, true)})
+    -- unit.debug((require 'inspect'){ngx.req.get_headers()})
+    -- unit.debug((require 'inspect'){fields_count = req.fields_count})
 
     -- NOTE hsq require 保证 METHOD(Location) 只注册一次，重复会报错。
     local app = require('app.server')
