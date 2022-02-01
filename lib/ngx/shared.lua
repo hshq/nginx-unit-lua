@@ -1,10 +1,9 @@
 local ngx_const    = require 'ngx.const'
 local ngx_datetime = require 'ngx.datetime'
 
+local type       = type
 local calc_units = ngx_const.calc_units
 local now        = ngx_datetime.now
-
-local type = type
 
 
 local config = {}

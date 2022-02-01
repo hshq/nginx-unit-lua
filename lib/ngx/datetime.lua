@@ -1,7 +1,6 @@
 local utils = require 'utils'
 
-local os_date  = os.date
-
+local os_date    = os.date
 local parse_time = utils.parse_time
 
 
@@ -15,6 +14,7 @@ local COOKIE_TIME_FMT   = '!%a, %d-%b-%y %T %Z'
 
 
 -- 如用于 Last-Modified
+-- @ts? 时间戳
 local function http_time(ts)
     return os_date(LAST_MODIFIED_FMT, ts)
 end
@@ -59,7 +59,7 @@ local function utctime()
 end
 -- }}}
 
-return {
+return exportable {
     update_time     = update_time,
     time            = time,
     now             = now,

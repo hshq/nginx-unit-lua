@@ -2,9 +2,7 @@ local cjson = require 'cjson'
 local unit  = require 'lnginx-unit'
 
 local tointeger = math.tointeger
-
-local pairs  = pairs
-local ipairs = ipairs
+local pairs, ipairs  = _G 'pairs, ipairs'
 
 
 local NGX_LOG_LEVEL = { [0] = 'STDERR',
@@ -110,7 +108,7 @@ local function calc_units(str)
 end
 
 
-return {
+return exportable {
     NGX_LOG_LEVEL = NGX_LOG_LEVEL,
 
     ngx_const = ngx_const,

@@ -1,25 +1,19 @@
 local base = require 'utils.base'
-base.init()
--- base.init= nil
-local merge = base.merge
 
-local _M = {}
+local push, join = base 'push, join'
 
-merge(_M, base)
-merge(_M, (require 'lcodec'))
+local _M = exportable {}
+
+extend(_M, (require 'utils.ffi'))
+extend(_M, base)
+extend(_M, (require 'lcodec'))
 -- NOTE hsq auto 可能使用 neon32/neon64 导致编解码失败。
 _M.set_base64_codec(_M.base64_codec.avx2)
 
 
-local type     = type
-local pairs    = pairs
-local ipairs   = ipairs
-local tonumber = tonumber
-local char     = string.char
-local upper    = string.upper
-local push     = base.push
-local join     = base.join
-local md5      = _M.md5
+local type, pairs, ipairs, tonumber = _G 'type, pairs, ipairs, tonumber'
+local char, upper = string 'char, upper'
+local md5 = _M.md5
 
 
 function _M.md5_bin(str)

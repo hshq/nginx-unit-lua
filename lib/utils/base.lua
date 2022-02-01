@@ -5,11 +5,15 @@ local api = require 'utils.adapter'
 
 local type         = type
 local pairs        = pairs
+local error        = error
 local assert       = assert
+local require      = require
 local getmetatable = getmetatable
+local setmetatable = setmetatable
 local push         = table.insert
 local pop          = table.remove
 local join         = table.concat
+local unpack       = table.unpack
 local io_popen     = io.popen
 local io_open      = io.open
 
@@ -34,6 +38,15 @@ local function clear(tbl)
     end
 end
 
+local function keys(tbl)
+    local ks, i = {}, 1
+    for k in pairs(tbl) do
+        ks[i] = k
+        i = i + 1
+    end
+    return ks
+end
+
 local function map(tbl, func)
     for k, v in pairs(tbl) do
         tbl[k] = func(v)
@@ -54,7 +67,6 @@ local function clone(tbl, depth)
     return tbl2
 end
 
--- TODO hsq extend 代替 merge ？
 -- 数组部分追加，散列部分覆盖。
 local function merge(dst, src)
     -- for k, v in pairs(src) do
@@ -109,20 +121,75 @@ local function split(str, delimiter, limit, plain)
     return vec
 end
 
-local inited = false
-local function init(tz)
-    if inited then return end
-    inited = true
 
-    -- XXX 凡是第一参数可为字符串的
-    local strMeta__Index = getmetatable('').__index
-    strMeta__Index.split          = split
+-- XXX 凡是第一参数可为字符串的
+local strMeta__Index = getmetatable('').__index
+strMeta__Index.split = strMeta__Index.split or split
+
+
+-- @mod table
+-- fields string 'field, ...'
+-- return field, ...
+local function export(mod, fields)
+    local fs = {}
+    for f in fields:gmatch('[%w_]+') do
+        local v = mod[f]
+        if v == nil then
+            error('invalid field: ' .. f, 2)
+        end
+        push(fs, v)
+    end
+    return unpack(fs)
 end
 
+-- @mod string|table
+-- return table
+local function exportable(mod)
+    if type(mod) == 'string' then
+        mod = require(mod)
+    end
+    assert(type(mod) == 'table', 'Invalid module, not exportable')
+    local mt = getmetatable(mod)
+    if not mt then
+        mt = {}
+        setmetatable(mod, mt)
+    end
+    if not mt.__call then
+        mt.__call = export
+    else
+        assert(mt.__call == export, 'Module not exportable')
+    end
+    return mod
+end
 
-local _M = {
-    init  = init,
+-- -- NOTE hsq 语言服务器不能直接跳转文件；虽然不重要，但代码风格上引用关系不够直观。
+-- -- @mods string
+-- local function new_require(mods)
+--     local fs = {}
+--     for f in mods:gmatch('[%w_%-.]+') do
+--         local v = require(f)
+--         if v == nil then
+--             error('invalid module: ' .. f, 2)
+--         end
+--         push(fs, v)
+--     end
+--     return unpack(fs)
+-- end
 
+
+for k, v in pairs(package.loaded) do
+    if type(v) == 'table' then
+        exportable(v)
+    end
+end
+
+-- package.exportable = exportable
+_G.exportable = exportable
+-- _G.require    = new_require
+_G.extend     = merge
+
+
+local _M = exportable {
     sh         = sh,
     write_file = write_file,
 
@@ -131,6 +198,7 @@ local _M = {
     join     = join,
 
     clear    = clear,
+    keys     = keys,
     map      = map,
     clone    = clone,
     merge    = merge,
@@ -139,4 +207,4 @@ local _M = {
     split = split,
 }
 
-return merge(_M, api)
+return extend(_M, api)

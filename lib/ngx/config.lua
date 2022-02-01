@@ -1,13 +1,10 @@
 local base = require 'utils.base'
 
 local clone = base.clone
-
-local pairs  = pairs
-local type   = type
-local assert = assert
+local pairs, type, assert = _G 'pairs, type, assert'
 
 
-local _M = {
+local _M = exportable {
     DEFAULT_ROOT         = 'html',
 
     -- 为避免 DOS 攻击

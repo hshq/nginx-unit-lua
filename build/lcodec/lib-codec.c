@@ -12,9 +12,6 @@
 #include <openssl/md5.h>
 #include <gityf_crc/crc32.h>
 
-#include <time.h>
-#include <sys/time.h>
-
 
 #define AUTO_CODEC 0
 #define ERR_CODEC  "Unsupported codec"
@@ -37,15 +34,6 @@ struct kv {
 
 #define KV_COUNT(VEC) (sizeof(VEC) / sizeof(struct kv))
 
-// static struct kv have[] = {
-//     {"avx2",   HAVE_AVX2},
-//     {"neon32", HAVE_NEON32},
-//     {"neon64", HAVE_NEON64},
-//     {"ssse3",  HAVE_SSSE3},
-//     {"sse41",  HAVE_SSE41},
-//     {"sse42",  HAVE_SSE42},
-//     {"avx",    HAVE_AVX},
-// };
 static struct kv base64_codec[] = {
     {"auto",    AUTO_CODEC},
     #if HAVE_AVX2
@@ -152,25 +140,6 @@ LUAMOD_API int lib_func_base64_decode(lua_State *L) {
     return 1;
 }
 
-// LUAMOD_API int lib_func_base64_stream_encode_init(lua_State *L) {
-//     return luaL_error(L, "TODO base64_stream_encode_init");
-// }
-
-// LUAMOD_API int lib_func_base64_stream_encode(lua_State *L) {
-//     return luaL_error(L, "TODO base64_stream_encode");
-// }
-
-// LUAMOD_API int lib_func_base64_stream_encode_final(lua_State *L) {
-//     return luaL_error(L, "TODO base64_stream_encode_final");
-// }
-
-// LUAMOD_API int lib_func_base64_stream_decode_init(lua_State *L) {
-//     return luaL_error(L, "TODO base64_stream_decode_init");
-// }
-
-// LUAMOD_API int lib_func_base64_stream_decode(lua_State *L) {
-//     return luaL_error(L, "TODO base64_stream_decode");
-// }
 
 LUAMOD_API int lib_func_md5(lua_State *L) {
     const char *str;
@@ -209,46 +178,6 @@ LUAMOD_API int lib_func_crc32(lua_State *L) {
     return 1;
 }
 
-// TODO hsq FFI 实现更好：标准库的简单封装？
-LUAMOD_API int lib_func_parse_time(lua_State *L) {
-    const char *time;
-    const char *fmt;
-    struct tm tm;
-    time_t sec;
-
-    time = luaL_checkstring(L, 1);
-    fmt  = luaL_checkstring(L, 2);
-    if (strptime(time, fmt, &tm)) {
-        sec = timegm(&tm);
-        lua_pushinteger(L, sec);
-    } else {
-        lua_pushnil(L);
-    }
-
-    return 1;
-}
-
-// TODO hsq 时间类函数放在别处更好。
-LUAMOD_API int lib_func_now(lua_State *L) {
-    struct timeval tp;
-    struct timezone tzp;
-    boolean_t all;
-    int rc;
-
-    all = lua_toboolean(L, 1);
-    rc  = gettimeofday(&tp, all ? &tzp : NULL);
-    if (rc) return 0;
-    if (all) {
-        lua_pushinteger(L, tp.tv_sec);
-        lua_pushinteger(L, tp.tv_usec);
-        lua_pushinteger(L, tzp.tz_minuteswest);
-        lua_pushboolean(L, tzp.tz_dsttime);
-        return 4;
-    } else {
-        lua_pushnumber(L, tp.tv_sec + tp.tv_usec / 1000000.0);
-        return 1;
-    }
-}
 
 static const luaL_Reg lib_funcs[] = {
     {"set_base64_codec",    lib_func_base64_set_codec},
@@ -257,18 +186,9 @@ static const luaL_Reg lib_funcs[] = {
     {"base64_encode",       lib_func_base64_encode},
     {"base64_decode",       lib_func_base64_decode},
 
-    // {"stream_encode_init",  lib_func_base64_stream_encode_init},
-    // {"stream_encode",       lib_func_base64_stream_encode},
-    // {"stream_encode_final", lib_func_base64_stream_encode_final},
-    // {"stream_decode_init",  lib_func_base64_stream_decode_init},
-    // {"stream_decode",       lib_func_base64_stream_decode},
-
     {"md5",                 lib_func_md5},
     {"crc32",               lib_func_crc32},
-    {"parse_time",          lib_func_parse_time},
-    {"now",                 lib_func_now},
     /* placeholders */
-    // {"have",  NULL},
     {"base64_codec", NULL},
     {NULL,    NULL}
 };
@@ -286,7 +206,6 @@ static const luaL_Reg lib_funcs[] = {
 LUAMOD_API int luaopen_lcodec(lua_State *L) {
     luaL_newlib(L, lib_funcs);
 
-    // REG_KV(have, boolean);
     REG_KV(base64_codec, integer);
 
     return 1;

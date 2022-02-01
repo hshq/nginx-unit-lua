@@ -2,7 +2,6 @@
 #define LUA_LIB
 
 #include <lualib.h>
-#include <unistd.h>
 #include <assert.h>
 
 #include "lib-nginx-unit.h"
@@ -56,23 +55,23 @@ LUAMOD_API int lib_func_log(lua_State *L) {
     return 0;
 }
 
-LUAMOD_API int lib_func_getpid(lua_State *L) {
-    pid_t pid = getpid();
-    lua_pushinteger(L, pid);
+
+LUAMOD_API int lib_func_table_new(lua_State *L) {
+    int narr = luaL_checkinteger(L, 1);
+    int nrec = luaL_checkinteger(L, 2);
+
+    narr = narr > 0 ? narr : 0;
+    nrec = nrec > 0 ? nrec : 0;
+    lua_createtable(L, narr, nrec);
     return 1;
 }
 
-LUAMOD_API int lib_func_getppid(lua_State *L) {
-    pid_t ppid = getppid();
-    lua_pushinteger(L, ppid);
-    return 1;
-}
 
 static const luaL_Reg lib_funcs[] = {
-    {"init",     lib_func_init},
-    {"log",      lib_func_log},
-    {"getpid",   lib_func_getpid},
-    {"getppid",  lib_func_getppid},
+    {"init",      lib_func_init},
+    {"log",       lib_func_log},
+
+    {"table_new", lib_func_table_new},
     /* placeholders */
     {"VERSION",    NULL},
     {"VERNUM",     NULL},
@@ -151,16 +150,9 @@ LUAMOD_API int luaopen_unit_core(lua_State *L) {
     // 在注册表中缓存 string.format
     // int top = lua_absindex(L, -1);
     // luaL_openlibs(L);
-    #if 0
-    assert(lua_getglobal(L, "string") == LUA_TTABLE);
-    assert(lua_getfield(L, -1, "format") == LUA_TFUNCTION);
-    LUA_RIDX_STR_FORMAT = luaL_ref(L, LUA_REGISTRYINDEX);
-    lua_pop(L, 1);
-    #else
     assert(luaL_dostring(L, "return string.format") == 0);
     // assert(ua_isfunction(L, -1));
     LUA_RIDX_STR_FORMAT = luaL_ref(L, LUA_REGISTRYINDEX);
-    #endif
 
     if (LUA_NOREF == LUA_RIDX_STR_FORMAT) {
         #define ERR_NEED_STR_FORMAT "log() 需要 string.format(fmt, ...) ！"

@@ -1,0 +1,45 @@
+#!/usr/bin/env luajit
+package.path = './?.lua;' .. package.path --;; didn't contains ./?.lua in cli
+
+LoadV = function ( ... )
+    return require(VANILLA_ROOT .. '/' .. VANILLA_VERSION_DIR_STR .. '/' .. ...)
+end
+
+local V = LoadV 'vanilla.sys.config'
+
+local help_description = [[
+_|      _|    _|_|    _|      _|  _|_|_|  _|        _|          _|_|
+_|      _|  _|    _|  _|_|    _|    _|    _|        _|        _|    _|
+_|      _|  _|_|_|_|  _|  _|  _|    _|    _|        _|        _|_|_|_|
+  _|  _|    _|    _|  _|    _|_|    _|    _|        _|        _|    _|
+    _|      _|    _|  _|      _|  _|_|_|  _|_|_|_|  _|_|_|_|  _|    _|
+
+Vanilla v]] .. V.version .. [[, A MVC web framework for Lua powered by OpenResty.
+
+Usage: vanilla COMMAND [ARGS] [OPTIONS]
+
+The available vanilla commands are:
+ new [name]             Create a new Vanilla application
+]]
+
+local launcher = LoadV 'vanilla.sys.vanilla'
+local application = LoadV 'vanilla.sys.application'
+
+-- check trace
+-- V_TRACE = false
+-- if arg[#arg] == '--trace' then
+--   table.remove(arg, #arg)
+--   
+--   V_TRACE = true
+-- end
+
+-- check args
+if arg[1] == 'new' and arg[2] then application.new(arg[2])
+-- elseif arg[1] == 'start' then launcher.start()
+-- elseif arg[1] == 'stop' then launcher.stop()
+-- elseif arg[1] == 'restart' then
+--  launcher.stop()
+--  launcher.start()
+-- elseif arg[1] == 'reload' then launcher.reload()
+else print(help_description)
+end

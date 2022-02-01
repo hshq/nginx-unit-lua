@@ -1,17 +1,18 @@
 -- 无状态函数原型
 local utils     = require 'utils'
 local ngx_const = require 'ngx.const'
+local datetime  = require 'ngx.datetime'
+local todo      = require 'ngx.todo'
 
-local type  = type
-local join  = utils.join
-local merge = utils.merge
+local type = type
+local join = utils.join
 
 local NGX_LOG_LEVEL = ngx_const.NGX_LOG_LEVEL
 local logs          = ngx_const.logs
 local null          = ngx_const.null
 
 
-local _M = {
+local _M = exportable {
     -- TODO hsq 模块导出接口能放在文件头部更好？
     decode_base64 = utils.decode_base64,
     encode_base64 = utils.encode_base64,
@@ -30,9 +31,9 @@ local _M = {
     encode_args      = utils.encode_args,
 }
 
-merge(_M, ngx_const.ngx_const)
-merge(_M, (require 'ngx.datetime'))
-merge(_M, (require 'ngx.todo'))
+extend(_M, ngx_const.ngx_const)
+extend(_M, datetime)
+extend(_M, todo)
 
 
 function _M.get_phase()

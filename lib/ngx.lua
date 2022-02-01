@@ -3,21 +3,13 @@ local utils     = require 'utils'
 local ngx_const = require 'ngx.const'
 local ngx_proto = require 'ngx.proto'
 
-local require      = require
-local setmetatable = setmetatable
-local type         = type
-local pairs        = pairs
-local ipairs       = ipairs
-local rawget       = rawget
-local rawset       = rawset
-local tostring     = tostring
-local tointeger    = math.tointeger
-local lower        = string.lower
 
-local log_alert = unit.alert
-local log_err   = unit.err
-local log_warn  = unit.warn
--- local log_debug = unit.debug
+local require, type, pairs, ipairs, rawget, rawset, tostring, setmetatable =
+    _G 'require, type, pairs, ipairs, rawget, rawset, tostring, setmetatable'
+local tointeger = math.tointeger
+local lower     = string.lower
+
+local log_alert, log_err, log_warn, log_debug = unit 'alert, err, warn, debug'
 
 local cap_mtds_id2name    = ngx_const.cap_mtds_id2name
 local http_status_id2name = ngx_const.http_status_id2name
@@ -27,19 +19,14 @@ local normalize_header    = ngx_proto.normalize_header
 -- local flatten_header      = ngx_proto.flatten_header
 local encode_args         = ngx_proto.encode_args
 
-local push       = utils.push
-local join       = utils.join
--- local clear      = utils.clear
-local map        = utils.map
-local clone      = utils.clone
-local merge      = utils.merge
-local readonly   = utils.readonly
-local parseQuery = utils.parseQuery
+local push, clear, join, map, clone, readonly, parseQuery =
+    utils 'push, clear, join, map, clone, readonly, parseQuery'
 
 
-local pid  = unit.getpid()
-local ppid = unit.getppid()
-
+-- local pid  = unit.getpid()
+-- local ppid = unit.getppid()
+local pid  = utils.getpid()
+local ppid = utils.getppid()
 
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
 --      需要注意隔离请求私有数据，如 ngx_req
@@ -60,7 +47,7 @@ local function make_ngx(cfg, req, link_num)
         -- ctx = {}, -- 请求上下文，普通表，可覆盖；按需初始化
     }
 
-    merge(ngx, ngx_proto)
+    extend(ngx, ngx_proto)
     ngx.shared = (require 'ngx.shared')(cfg)
 
 

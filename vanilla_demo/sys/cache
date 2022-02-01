@@ -1,0 +1,22 @@
+[shared_dict]
+dict=idevz
+exptime=100
+
+[memcached]
+instances=127.0.0.1:11211 127.0.0.1:11211
+exptime=60
+timeout=100
+poolsize=100
+idletimeout=10000
+
+[redis]
+instances=127.0.0.1:6379 127.0.0.1:6379
+exptime=60
+timeout=100
+poolsize=100
+idletimeout=10000
+
+[lrucache]
+items=200
+exptime=60
+useffi=false

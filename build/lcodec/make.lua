@@ -5,4 +5,7 @@ return {
                 '../deps/gityf_crc/crc32.o'},
     INC_DIRS = {'../deps',
                 '/usr/local/opt/openssl/include/',},
+    LIBS     = {'ssl',
+                'crypto'},
+    LD_DIRS  = {'/usr/local/opt/openssl/lib'},
 }

@@ -7,16 +7,10 @@ local PADDING = ' '
 
 
 local base = require 'utils.base'
-local push = base.push
-local pop  = base.pop
-local join = base.join
 
-local type   = type
-local next   = next
-local pairs  = pairs
-local ipairs = ipairs
-local assert = assert
-local fmt    = string.format
+local push, pop, join = base 'push, pop, join'
+local type, next, pairs, ipairs, assert = _G 'type, next, pairs, ipairs, assert'
+local fmt = string.format
 
 
 return function(task)
@@ -72,7 +66,9 @@ return function(task)
     local function format1(val)
         if type(val) == 'table' then
             local k, v = next(val)
-            if k == 1 then
+            if k == nil then
+                add '{}'
+            elseif k == 1 then
                 add'[ '; format1(v); add' ]'
             else
                 assert(type(k) == 'string', 'Field name must be a string')

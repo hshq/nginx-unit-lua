@@ -1,13 +1,15 @@
+local utils = require 'utils'
+local core  = exportable 'lnginx-unit.core'
 
-local core = require 'lnginx-unit.core'
-
-local c_log     = core.log
+local c_log, LOG_LEVEL, c_init = core 'log, LOG_LEVEL, init'
 -- local c_req_log = core.req_log
-local LOG_LEVEL = core.LOG_LEVEL
-local c_init    = core.init
 
-local type   = type
-local select = select
+local type, select = _G 'type, select'
+
+
+table.new = table.new or core.table_new
+package.loaded['table.new'] = table.new
+
 
 local function check_level(level)
     local lv = level
@@ -23,6 +25,7 @@ end
 
 -- @level int/string
 local function log(level, fmt, ...)
+    fmt = tostring(fmt)
     local lv = check_level(level)
     if lv then
         if select('#', ...) == 0 then
@@ -58,4 +61,4 @@ end
 for k, v in pairs(mod) do
     core[k] = v
 end
-return core
+return exportable(core)

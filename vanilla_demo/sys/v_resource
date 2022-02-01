@@ -1,0 +1,22 @@
+[mc]
+conf=127.0.0.1:7348 127.0.0.1:11211
+
+[redis]
+conf=127.0.0.1:7348 127.0.0.1:7349
+
+[redisq]
+conf=127.0.0.1:7348 127.0.0.1:7349
+
+[db.user.write]
+host =127.0.0.1
+port =3306
+dbname =user.info
+user =idevz
+passwd =idevz
+
+[db.user.read]
+host =127.0.0.1
+port =3306
+dbname =user.info
+user =idevz
+passwd =idevz

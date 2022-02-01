@@ -66,8 +66,7 @@ LUAMOD_API void reg_req(lua_State *);
 
 LUAMOD_API int lib_func_init(lua_State *);
 LUAMOD_API int lib_func_log(lua_State *);
-LUAMOD_API int lib_func_getpid(lua_State *);
-LUAMOD_API int lib_func_getppid(lua_State *);
+LUAMOD_API int lib_func_table_new(lua_State *);
 
 LUAMOD_API int ctx_mtd_run(lua_State *);
 LUAMOD_API int ctx_mtd_done(lua_State *);

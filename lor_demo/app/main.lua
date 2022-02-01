@@ -1,94 +1,60 @@
 #!/usr/bin/env lua5.4
 
--- 配置可以来自 LUA_INIT_5_4(5.4)/LUA_INIT(5.4&jit) 或 unitd 配置参数，后者用法同前者。
---  前者必须设置全局变量 unit_config ，后者则支持全局变量 unit_config 和返回配置表。
---      export LUA_INIT=@conf/config.lor.lua
---      pkill unitd; unitd
---      如果 Lua 配置文件中既设置全局变量，也作为返回值，则此处代码无需更改。
-local unit_config
-unit_config, _G.unit_config = _G.unit_config, nil
 
-local args = table.concat({...}, '\n')
+-- -- 配置可以来自 LUA_INIT_5_4(5.4)/LUA_INIT(5.4&jit) 或 unitd 配置参数，后者用法同前者。
+-- --  前者必须设置全局变量 unit_config ，后者则支持全局变量 unit_config 和返回配置表。
+-- --      export LUA_INIT=@conf/config.lor.lua
+-- --      pkill unitd; unitd
+-- --      如果 Lua 配置文件中既设置全局变量，也作为返回值，则此处代码无需更改。
+-- local unit_config
+-- unit_config, _G.unit_config = _G.unit_config, nil
 
-local is_jit = (_VERSION == 'Lua 5.1' and _G['jit']) and true or false
-local lua_ver = is_jit and (_G['jit'].version:match('^(.-)%-')) or _VERSION
+-- local args = table.concat({...}, '\n')
 
--- NOTE hsq 自动生效
-local env_init
-if is_jit then
-    env_init = os.getenv('LUA_INIT')
-else
-    env_init = os.getenv('LUA_INIT_5_4') or os.getenv('LUA_INIT')
-end
+-- local is_jit = (_VERSION == 'Lua 5.1' and _G['jit']) and true or false
+-- local lua_ver = is_jit and (_G['jit'].version:match('^(.-)%-')) or _VERSION
 
--- NOTE hsq 参数配置优先于环境变量
-if #args > 0 and (args ~= env_init or not unit_config) then
-    if args:sub(1, 1) == '@' then
-        local path = args:sub(2)
-        if #path > 0 then
-            unit_config = assert(loadfile(path))()
-        end
-    else
-        unit_config = assert(load(args, 'unit args'))()
-    end
-    unit_config, _G.unit_config = (unit_config or _G.unit_config), nil
-end
+-- -- NOTE hsq 自动生效
+-- local env_init
+-- if is_jit then
+--     env_init = os.getenv('LUA_INIT')
+-- else
+--     env_init = os.getenv('LUA_INIT_5_4') or os.getenv('LUA_INIT')
+-- end
+
+-- -- NOTE hsq 参数配置优先于环境变量
+-- if #args > 0 and (args ~= env_init or not unit_config) then
+--     if args:sub(1, 1) == '@' then
+--         local path = args:sub(2)
+--         if #path > 0 then
+--             unit_config = assert(loadfile(path))()
+--         end
+--     else
+--         unit_config = assert(load(args, 'unit args'))()
+--     end
+--     unit_config, _G.unit_config = (unit_config or _G.unit_config), nil
+-- end
+local unit_config = _G.unit_config
+_G.unit_config = nil
 
 local app_config = assert(unit_config and unit_config.app, 'invalid config')
 _G.DEBUG = app_config.DEBUG
 
+local utils    = require 'utils'
 local unit     = require 'lnginx-unit'
 local make_ngx = require 'ngx'
 
 local ngx_cfg = (require 'ngx.config')(unit_config)
 
 
--- -- 测试
--- unit.debug((require 'inspect'){
---     unit_config = unit_config,
---     unit = unit,
--- })
-
-
-local FAILED = 'Failed!\n'
-
-local function check(ret, rc, err)
-    return ret and ret or
-        error(('[%d]%s'):format(err or FAILED, err, rc), 2)
-end
-
-
--- -- 测试
--- local reg = false
+local lua_ver = utils.is_jit and (_G['jit'].version:match('^(.-)%-')) or _VERSION
 
 
 local function request_handler(req)
-    -- -- 测试
-    -- unit.debug((require 'inspect')(req))
-
-
     _G.ngx = make_ngx(ngx_cfg, req)
-
-
-    -- -- 测试
-    -- unit.debug((require 'inspect'){ngx.req.get_headers(nil, true)})
-    -- unit.debug((require 'inspect'){ngx.req.get_headers()})
-    -- unit.debug((require 'inspect'){fields_count = req.fields_count})
 
     -- NOTE hsq require 保证 METHOD(Location) 只注册一次，重复会报错。
     local app = require('app.server')
-
-
-    -- -- 测试
-    -- if not reg then
-    --     reg = true
-    --     app:post('/post', function(req, res, next)
-    --         ngx.log(ngx.ERR, (require 'inspect'){ngx.req.get_post_args(1)})
-    --         next()
-    --     end)
-    -- end
-
-
     app:run()
 
 
@@ -117,10 +83,16 @@ local function request_handler(req)
 end
 
 
+local function check(ret, rc, err)
+    return ret and ret or
+        error(('[%d]%s'):format(err or 'Failed!', err, rc), 2)
+end
+
 local ctx = check(unit.init(request_handler))
+
 unit.info(lua_ver)
 
-local ok = check(ctx:run())
+check(ctx:run())
 
 ctx:done()
 os.exit(true, true)

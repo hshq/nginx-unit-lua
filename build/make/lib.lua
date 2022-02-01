@@ -2,13 +2,9 @@ local base = require 'utils.base'
 
 local _M
 
-local join       = base.join
-local push       = base.push
-local readonly   = base.readonly
-local is_jit     = base.is_jit
-local sh         = base.sh
-local write_file = base.write_file
-local unpack     = table.unpack
+local join, push, readonly, is_jit, sh, write_file =
+    base 'join, push, readonly, is_jit, sh, write_file'
+local unpack = table.unpack
 
 
 local function cmd(array)
@@ -86,7 +82,7 @@ local function env(tbl)
     })
 end
 
-_M = {
+_M = exportable {
     CC       = 'gcc',
     MAKE     = 'make', -- '$(MAKE)'
     INC_DIRS = readonly({}),
