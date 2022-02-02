@@ -4,7 +4,7 @@
 
 #### 介绍
 Nginx-Unit 的 Lua5.4/LuaJIT 支持。
-可运行 Lor 框架，有针对性的做了 Openresty 适配。
+可运行 Lor/Vanilla 框架，有针对性的做了 Openresty 适配。
 
 只初步实现了 HTTP 功能。
 只在 MacOS 上测试过。
@@ -55,14 +55,15 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 
 #### 使用说明
 
-1.  ```
-    cd lor_demo
-    # 如用 luajit 执行脚本，生成的配置启动 luajit 。
-    ./unitd.lua        # 查看配置， demo 的 Unit 配置在 conf/config.lor.lua
-    ./unitd.lua save   # 生成并存储 json 格式的配置到文件
-    ./unitd.lua start  # 启动 Unit 服务器， stop/restart
-    ./unitd.lua config # save 然后推送配置到 Unit
-    ```
+- 在 `UNIT-ROOT/` 中：
+    - `config/config.lua` 可配置 UNIT 、注册框架和 App 。
+    - 执行 `./unitd.lua` 进行管理，可指定如下命令：
+        - `[i[nfo]]` 缺省命令，查看可用命令、注册的 App 列表
+        - `state`    查看当前 unit 配置， JSON 格式
+        - `r[estart], s[tart], q[uit]` 管理 unitd
+        - `d[etail] [APP-NAME/No.]` 无参列举注册的 App 信息，参数指定 App 则显示其注册信息、配置信息、 ngx 配置和 vhost 配置。
+        - `u[pdate]` 处理配置并更新 UNIT 的 vhost 配置。
+        - `g[et]` GET 请求测试
 
 #### 参与贡献
 

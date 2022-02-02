@@ -6,7 +6,7 @@
 From Baidu translation.
 
 Lua5.4/luajit of Nginx-Unit support.
-It can run the Lor framework and make targeted openresty adaptation.
+It can run the Lor/Vanilla frameworks and make targeted openresty adaptation.
 
 Only the HTTP function is preliminarily realized.
 Only tested on MacOS.
@@ -55,14 +55,22 @@ And several application processes, and various processes communicate with each o
 
 #### Instructions
 
-1.  ```
-    cd lor_demo
-    # If you execute the script with luajit, the generated configuration will start luajit.
-    ./unitd.lua        # View the configuration. The Unit configuration of the demo is in conf/config.lor.lua
-    ./unitd.lua save   # Generate and store configuration files in JSON format
-    ./unitd.lua start  # Start the Unit server, stop/restart
-    ./unitd.lua config # *save* and then push the configuration to Unit
-    ```
+- In `UNIT-ROOT/`:
+    - `config/config.lua` configures UNIT, registers frameworks and apps.
+    - Execute `./unitd.lua` for management, you can specify the following commands:
+        - `[i[nfo]]`
+            Default command, view the list of available commands and registered apps
+        - `state`
+            View the current UNIT configuration in JSON format
+        - `r[estart], s[tart], q[uit]`
+            Manage unitd
+        - `d[etail] [APP-NAME/No.]`
+            If there is no parameter, all the registered apps' information will be listed.
+            If the app parameter is specified, its registration information, configuration information, NGX configuration and vhost configuration will be displayed.
+        - `u[pdate]`
+            Process and update the vhosts configuration of the UNIT.
+        - `g[et]`
+            Get request test
 
 #### Contribution
 

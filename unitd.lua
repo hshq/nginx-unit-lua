@@ -39,7 +39,6 @@ local sh, join, is_jit, write_file, setcwd =
     utils 'sh, join, is_jit, write_file, setcwd'
 
 
-local host, port
 local app_configs = {}
 
 -- gsub('.-:', '')
@@ -68,9 +67,8 @@ for i, app in ipairs(config.apps) do
             'TODO hsq ngx.shared 模拟实现不支持多进程')
     end
 
-    host, port = next(config_data.vhost.listeners):match('(.+):(.+)')
-    host = (host == '*') and 'localhost' or host
-    app.host, app.port = host, port
+    app.host, app.port = next(config_data.vhost.listeners):match('(.+):(.+)')
+    app.host = (app.host == '*') and 'localhost' or app.host
 
     -- local config_str = cjson.encode(config_data.vhost)
     -- -- NOTE hsq unit 收到配置字串会自动过滤
@@ -94,9 +92,9 @@ end
 local funcs = {}
 local fks = {'i[nfo]', 'state',
     '\n\tr[estart]', 's[tart]', 'q[uit]',
-    '\n\td[etail] \t[APP-NAME|APP-NO.]',
-    '\n\tu[pdate] \t[APP-NAME|APP-NO.]',
-    '\n\tg[et] \t\t<APP-NAME|APP-NO.>'}
+    '\n\td[etail] \t[APP-NAME/No.]',
+    '\n\tu[pdate] \t[APP-NAME/No.]',
+    '\n\tg[et]  \t\t<APP-NAME/No.>',}
 
 local function list_apps()
     print('apps:')
@@ -109,7 +107,6 @@ function funcs.info()
     print('funcs:', join(fks, ', '))
     print ''
     print('SOCK:', SOCK)
-    print('HOST:', host..':'..port)
     print('STATE:', unit.DEFAULT_CONFIG.STATE)
     print ''
     list_apps()
@@ -161,9 +158,9 @@ function funcs.state()
     local cmd = join({
         'curl -s \\',
         '   --unix-socket %s \\',
-        '   http://%s:%s/config/',
+        '   URL',
     }, '\n')
-    cmd = cmd:format(SOCK, host, port)
+    cmd = cmd:format(SOCK)
     print(cmd)
     local r = sh(cmd)
     local cfg = cjson.decode(r)
@@ -192,20 +189,20 @@ funcs.r = funcs.restart
 -- curl -s -X PUT \
 --     --unix-socket /usr/local/var/run/unit/control.sock \
 --     --data-binary '{ "pass": "routes/lor" }' \
---     'http://localhost:8888/config/listeners/*:8888/'
+--     'http://URL/config/listeners/*:8888/'
 function funcs.update(app)
     local data, filepath
     local cmd = join({
         'curl -s -X PUT \\',
         '   --data-binary \'%s\' \\',
         '   --unix-socket %s \\',
-        '   http://%s:%s/config/',
+        '   http://URL/config/',
     }, '\n')
     if app then
         filepath = app.vhost_file
         write_file(filepath, app_configs[app.name].vhost_p)
         data = '@' .. filepath
-        cmd = cmd:format(data, SOCK, app.host, app.port)
+        cmd = cmd:format(data, SOCK)
         -- TODO hsq 根据当前配置，选择分拆更新或整体更新。
         -- TODO hsq 或者汇总各个 App 之后，比较更新！
         print(cmd)
@@ -228,7 +225,7 @@ function funcs.update(app)
         filepath = cfg_dir .. '/config.json'
         write_file(filepath, pjson_encode(cfgs))
         data = '@' .. filepath
-        cmd = cmd:format(data, SOCK, host, port)
+        cmd = cmd:format(data, SOCK)
     end
     echo_sh(cmd)
 end
@@ -237,8 +234,9 @@ funcs.u = funcs.update
 function funcs.get(app)
     assert(app)
     local path = '?desc=基于 Nginx/Unit 的 Lua 框架#'
-    -- echo_sh(('curl -s -H"cookie: a=b" "http://%s:%s/%s"'):format(host, port, path))
-    echo_sh(('curl -s -b"a=b" "http://%s:%s/%s"'):format(app.host, app.port, path))
+    -- local cmd = 'curl -s -H"cookie: a=b" "http://%s:%s/%s"'
+    local cmd = 'curl -s -b"a=b" "http://%s:%s/%s"'
+    echo_sh(cmd:format(app.host, app.port, path))
 
 end
 funcs.g = funcs.get
