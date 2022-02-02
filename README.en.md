@@ -11,6 +11,7 @@ It can run the Lor/Vanilla frameworks and make targeted openresty adaptation.
 Only the HTTP function is preliminarily realized.
 Only tested on MacOS.
 
+
 #### Software Architecture
 Lua is not integrated into Unit like those languages officially supported by Unit,
 It is in the form of an external application (the configuration type is `external`).
@@ -19,6 +20,14 @@ When the Unit starts (or when the application configuration changes), start the 
 Interact with the Unit communication module that has been compiled into the Lua shared library.
 The Unit main process will start three functional process controllers, routers and application prototypes,
 And several application processes, and various processes communicate with each other.
+
+- `build/`      The source code and dependencies required to build the library.
+- `lib/`        Library files that the runtime depends on.
+- `config/`     Runtime and app configurations.
+- `frameworks/` App dependent framework.
+- `apps/`       App 。
+- `unitd.lua`   UNIT service management, viewing status and configuration, and app startup entry.
+
 
 #### Installation
 
@@ -53,6 +62,7 @@ And several application processes, and various processes communicate with each o
     make clean
     ```
 
+
 #### Instructions
 
 - In `UNIT-ROOT/`:
@@ -71,6 +81,7 @@ And several application processes, and various processes communicate with each o
             Process and update the vhosts configuration of the UNIT.
         - `g[et]`
             Get request test
+
 
 #### Contribution
 

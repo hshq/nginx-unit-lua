@@ -21,8 +21,9 @@ local function request_handler(req)
     _G.ngx = make_ngx(ngx_cfg, req)
 
     -- NOTE hsq require 保证 METHOD(Location) 只注册一次，重复会报错。
-    local app = require('app.server')
-    app:run()
+    -- local app = require('app.server')
+    -- app:run()
+    dofile 'app/main.lua'
 
 
     -- -- 测试

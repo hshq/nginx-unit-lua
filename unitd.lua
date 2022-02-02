@@ -9,7 +9,6 @@ local ver = _VERSION:match('^Lua (.+)$')
 local func, target_app = ...
 func = func or 'info'
 
--- TODO hsq vanilla 的 main 合并到 index ，或者 lor 的 main 恢复，减少侵入性？
 -- TODO hsq 共享模块加载路径，至少是基础模块。
 -- NOTE hsq 相对路径易出问题。
 package.path = table.concat({

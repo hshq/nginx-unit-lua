@@ -12,11 +12,12 @@ local ver = _VERSION:match('^Lua (.+)$')
 local _ENV = {} -- setfenv(1, {})
 
 
-local unit_dir = getenv('PWD')
-local self = unit_dir .. '/config/config.lua'
+local unit_dir      = getenv('PWD')
+local config_dir    = unit_dir .. '/config'
+local framework_dir = unit_dir .. '/frameworks'
+local app_dir       = unit_dir .. '/apps'
 
-local config_file = 'config.lua'
-local vhost_file  = 'config.json'
+local self = config_dir .. '/config.lua'
 
 
 local function dirname(path)
@@ -29,9 +30,6 @@ end
 
 
 local cfg = {
-    -- config_file = config_file,
-    -- vhost_file  = vhost_file,
-
     unit = {
         dir = unit_dir,
         -- entry = 'unitd.lua',
@@ -53,13 +51,9 @@ local cfg = {
             '{{CPATH}}',
         },
     },
-
     frameworks = {
         lor     = {
-            name = 'lor',
-            app_config_dir = 'conf',
-            entry = 'app/main.lua',
-            lib = unit_dir .. '/lor',
+            lib = framework_dir .. '/lor',
             path = { '{{FRAMEWORK}}/?.lua' },
             app_path = {
                 '{{APP}}/app/?.lua',
@@ -67,10 +61,7 @@ local cfg = {
             },
         },
         vanilla = {
-            name = 'vanilla',
-            app_config_dir = 'config',
-            entry = 'pub/main.lua',
-            lib = unit_dir .. '/vanilla/framework',
+            lib = framework_dir .. '/vanilla/framework',
             path = { '{{FRAMEWORK}}/?.lua' },
             app_path = {
                 '{{APP}}/?.lua',
@@ -82,14 +73,14 @@ local cfg = {
         {
             name        = 'demo_1',
             framework   = 'lor',
-            dir         = unit_dir .. '/lor_demo',
+            dir         = app_dir .. '/lor_demo',
             -- use_jit     = false,
             -- debug       = true,
         },
         {
             name        = 'demo_1',
             framework   = 'vanilla',
-            dir         = unit_dir .. '/vanilla_demo',
+            dir         = app_dir .. '/vanilla_demo',
             -- use_jit     = true,
             -- debug       = true,
         },
@@ -118,26 +109,26 @@ local vars = {
 -- cfg.prepare = function()
     -- TODO hsq 表内可引用自身字段会更方便（前向和后向）。
     for _, app in ipairs(cfg.apps) do
-        local fw      = cfg.frameworks[app.framework]
-        local cfg_dir = app.dir .. '/' .. fw.app_config_dir
+        local fw = cfg.frameworks[app.framework]
+        -- fw.name  = app.framework
 
-        app.name        = app.framework .. '.' .. app.name
-        app.config_file = cfg_dir .. '/' .. config_file
-        app.vhost_file  = cfg_dir .. '/' .. vhost_file
-        -- app.vhost_file  = ('%s/config/config.%s.json'):format(unit_dir, app.name)
+        local app_name = app.framework .. '.' .. app.name
+        cfg.apps[app_name] = assert(not cfg.apps[app_name] and app) -- 检查命名冲突
+
+        app.name        = app_name
+        app.config_file = ('%s/%s.lua'):format(config_dir, app.name)
+        app.vhost_file  = ('%s/%s.json'):format(config_dir, app.name)
         app.executable  = executable
+        app.entry       = ('%s/%s.lua'):format(framework_dir, app.framework)
+
         app.framework   = fw
         app.unit        = cfg.unit
-        app.entry       = app.dir .. '/' .. fw.entry
 
-        assert(not cfg.apps[app.name]) -- 检查命名冲突
-        cfg.apps[app.name] = app
-
-        app.path = PP(cfg.unit.path, PP(fw.path, PP(fw.app_path)))
+        app.path  = PP(cfg.unit.path, PP(fw.path, PP(fw.app_path)))
         app.cpath = PP(cfg.unit.cpath, PP(fw.cpath, PP(fw.app_cpath)))
-        vars['{{APP}}'] = app.dir
+        vars['{{APP}}']       = app.dir
         vars['{{FRAMEWORK}}'] = fw.lib
-        app.path = join(app.path, ';'):gsub('{{[^}]*}}', vars)
+        app.path  = join(app.path, ';'):gsub('{{[^}]*}}', vars)
         app.cpath = join(app.cpath, ';'):gsub('{{[^}]*}}', vars)
     end
 -- end
