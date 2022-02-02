@@ -6,14 +6,12 @@ local cfg_dir = pwd .. '/config'
 
 local ver = _VERSION:match('^Lua (.+)$')
 
--- TODO hsq 共享 app/main.lua 中的配置处理代码？
--- TODO hsq 生成 Makefile ，依赖 config.lor.lua 和 本文件？
 local func, target_app = ...
 func = func or 'info'
 
 -- TODO hsq vanilla 的 main 合并到 index ，或者 lor 的 main 恢复，减少侵入性？
--- TODO hsq 相对路径会有问题。
 -- TODO hsq 共享模块加载路径，至少是基础模块。
+-- NOTE hsq 相对路径易出问题。
 package.path = table.concat({
     lib_dir .. '/?.lua',
     cfg_dir .. '/?.lua',
@@ -34,7 +32,8 @@ local cjson   = require 'cjson'
 local pjson   = require 'prettify_json'
 local inspect = require 'inspect'
 
--- TODO hsq 用法还是繁琐；而且不方便注释掉；只在入口处导入 utils.base 。
+-- TODO hsq 用法还是繁琐；而且不方便注释掉；
+-- TODO hsq 只在入口处导入 utils.base 。
 local sh, join, is_jit, write_file, setcwd =
     utils 'sh, join, is_jit, write_file, setcwd'
 
