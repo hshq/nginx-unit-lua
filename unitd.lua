@@ -56,7 +56,7 @@ for i, app in ipairs(config.apps) do
     -- _G.USE_JIT = app.use_jit
     _G.app = app
     -- TODO hsq 配置文件中也有加载路径处理，重复了；或者将其作为模块来加载？
-    local config_data = assert(loadfile(app.config_file))()
+    local config_data = assert(loadfile(assert(app.config_file)))()
     _G.app = nil
     -- local config_data = `./$(app.config_file) -j -u`
 
@@ -145,7 +145,7 @@ function funcs.run(app)
 
     _G.unit_config = app_configs[app.name]
 
-    local entry = app.entry -- app.framework.entry
+    local entry = assert(app.entry) -- assert(app.framework.entry)
     dofile(entry)
     -- assert(loadfile(entry, 'bt', _G))()
 

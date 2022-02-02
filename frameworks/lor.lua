@@ -1,6 +1,5 @@
 #!/usr/bin/env lua5.4
 
-
 local unit_config = _G.unit_config
 _G.unit_config = nil
 

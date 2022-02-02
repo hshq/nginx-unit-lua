@@ -10,8 +10,6 @@ local USE_JIT = true
 
 local app = _G.app
 
--- TODO hsq 编译、运行时给每个 chunk 加入文件名常量？
-
 local config = {}
 
 config.app = {

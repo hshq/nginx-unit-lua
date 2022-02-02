@@ -41,7 +41,7 @@ local function protect_request_handler(req)
         if type(status) == 'table' then
             status = status.status
         else
-            -- TODO hsq 报错格式
+            -- TODO hsq 报错格式；然后与 lor 合并？
             status = status:gsub('\\([nt])', {n = '\n', t = '\t'})
             unit.err((require 'inspect'){'status:', package.path, status})
             status = ngx.HTTP_INTERNAL_SERVER_ERROR

@@ -17,6 +17,7 @@ local config_dir    = unit_dir .. '/config'
 local framework_dir = unit_dir .. '/frameworks'
 local app_dir       = unit_dir .. '/apps'
 
+-- TODO hsq 编译、运行时给每个 chunk 加入文件名常量？
 local self = config_dir .. '/config.lua'
 
 
@@ -98,12 +99,12 @@ local function PP(vec, paths)
 end
 
 local vars = {
-    -- ['{{APP}}'] = app.dir,
+    -- ['{{APP}}']       = app.dir,
     -- ['{{FRAMEWORK}}'] = fw.lib,
-    ['{{UNIT}}'] = cfg.unit.lib,
-    ['{{LUA-VER}}'] = ver,
-    ['{{PATH}}'] = package.path,
-    ['{{CPATH}}'] = package.cpath,
+    ['{{UNIT}}']      = cfg.unit.lib,
+    ['{{LUA-VER}}']   = ver,
+    ['{{PATH}}']      = package.path,
+    ['{{CPATH}}']     = package.cpath,
 }
 
 -- cfg.prepare = function()
