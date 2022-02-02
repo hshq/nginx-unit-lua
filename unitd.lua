@@ -89,8 +89,9 @@ local function echo_sh(cmd)
 end
 
 local funcs = {}
-local fks = {'i[nfo]', 'state',
+local fks = {'i[nfo]',
     '\n\tr[estart]', 's[tart]', 'q[uit]',
+    '\n\tstate \t\t[APP-NAME/No.]',
     '\n\td[etail] \t[APP-NAME/No.]',
     '\n\tu[pdate] \t[APP-NAME/No.]',
     '\n\tg[et]  \t\t<APP-NAME/No.>',}
@@ -105,9 +106,9 @@ end
 function funcs.info()
     print('funcs:', join(fks, ', '))
     print ''
-    print('SOCK:', SOCK)
-    print('STATE:', unit.DEFAULT_CONFIG.STATE)
-    print ''
+    -- print('SOCK:', SOCK)
+    -- print('STATE:', unit.DEFAULT_CONFIG.STATE)
+    -- print ''
     list_apps()
 end
 funcs.i = funcs.info
@@ -152,7 +153,7 @@ function funcs.run(app)
     _G.unit_config = nil
 end
 
-function funcs.state()
+function funcs.state(app)
     -- echo_sh('cat '..unit.DEFAULT_CONFIG.STATE..'/conf.json')
     local cmd = join({
         'curl -s \\',
@@ -163,10 +164,31 @@ function funcs.state()
     print(cmd)
     local r = sh(cmd)
     local cfg = cjson.decode(r)
-    -- print(inspect(cfg))
-    print(pjson_encode(cfg))
+    if app then
+        -- print(inspect(app))
+        cfg = cfg.config or cfg
+        -- print(inspect(cfg))
+        for k, v in pairs(cfg.listeners) do
+            if not v.pass:find(app.name) then
+                cfg.listeners[k] = nil
+            end
+        end
+        for k, v in pairs(cfg.routes) do
+            if k ~= app.name then
+                cfg.routes[k] = nil
+            end
+        end
+        for k, v in pairs(cfg.applications) do
+            if k ~= app.name then
+                cfg.applications[k] = nil
+            end
+        end
+        print(pjson_encode(cfg))
+    else
+        print(pjson_encode(cfg))
 
-    list_apps()
+        list_apps()
+    end
 end
 
 function funcs.start()

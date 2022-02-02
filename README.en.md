@@ -60,8 +60,8 @@ And several application processes, and various processes communicate with each o
     - Execute `./unitd.lua` for management, you can specify the following commands:
         - `[i[nfo]]`
             Default command, view the list of available commands and registered apps
-        - `state`
-            View the current UNIT configuration in JSON format
+        - `state [APP-NAME/No.]`
+            View the current vhost configuration of UNIT in JSON format
         - `r[estart], s[tart], q[uit]`
             Manage unitd
         - `d[etail] [APP-NAME/No.]`
