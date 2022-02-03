@@ -65,8 +65,7 @@ config.vhost = {
         [app.name] = {
             {   match  = { uri = {'*.ico'} },
                 action = { share = 'pub/$uri', },},
-            {   match  = { uri = '~^/.*$', }, -- '~^/(hello)?$'
-                action = { pass = 'applications/' .. app.name, },},
+            {   action = { pass = 'applications/' .. app.name, },},
         },},}
 
 return config

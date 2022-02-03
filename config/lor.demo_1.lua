@@ -69,7 +69,7 @@ config.vhost = {
             -- TODO hsq favicon.ico 404 ，以及 vanilla
             {   match  = { uri = {'*.ico'} },
                 action = { share = 'app/static$uri', },},
-            {   match  = { uri = '~^/.*$', }, -- '~^/(hello)?$'
+            {   --[[ match  = { uri = '~^/.*$', }, -- '~^/(hello)?$' ]]
                 action = { pass = 'applications/' .. app.name, },},
         },},}
 

@@ -1,7 +1,7 @@
 -- XXX 放在系统路径中
 -- XXX 加载后，在字符串元表中注册了一些方法
 
-local api   = require 'utils.adapter'
+local api = require 'utils.adapter'
 
 local type         = type
 local next         = next

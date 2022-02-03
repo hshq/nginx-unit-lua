@@ -20,10 +20,13 @@ local print          = print
 local type           = type
 local next           = next
 local tonumber       = tonumber
+local tointeger      = math.tointeger
 local select         = select
 local collectgarbage = collectgarbage
 local getenv         = os.getenv
+local echo           = io.write
 local join           = table.concat
+local unpack         = table.unpack
 local _G             = _G
 
 
@@ -58,8 +61,8 @@ local jdec = cjson.decode
 
 -- TODO hsq 用法还是繁琐；而且不方便注释掉；
 -- TODO hsq 只在入口处导入 utils.base 。
-local sh, join, is_jit, write_file, setcwd, pjson =
-    utils 'sh, join, is_jit, write_file, setcwd, pjson'
+local sh, is_jit, write_file, setcwd, pjson =
+    utils 'sh, is_jit, write_file, setcwd, pjson'
 
 
 local app_configs = {}
@@ -98,8 +101,6 @@ for i, app in ipairs(config.apps) do
     -- -- NOTE hsq unit 收到配置字串会自动过滤
     -- config_str = config_str:gsub('\\/', '/')
 
-    -- TODO hsq 生成单个 json 文件？
-    config_data.vhost_p = pjson_encode(config_data.vhost)
     app_configs[app.name] = config_data
 
     if target_app == app.name or tonumber(target_app) == i then
@@ -114,12 +115,17 @@ local function echo_sh(cmd)
 end
 
 local funcs = {}
-local fks = {'i[nfo]',
-    '\n\tr[estart]', 's[tart]', 'q[uit]',
-    '\n\tstate \t\t[APP-NAME/No.]',
-    '\n\td[etail] \t[APP-NAME/No.]',
-    '\n\tu[pdate] \t[APP-NAME/No.]',
-    '\n\tg[et]  \t\t<APP-NAME/No.>',}
+local fks = {
+    -- 1:名, 2:App参数
+    {'info',    0},
+    {'restart',0},
+    {'start',   0},
+    {'quit',    0},
+    {'vhost',   1},
+    {'detail',  1},
+    {'update',  1},
+    {'get',     2},
+}
 
 local function list_apps()
     print('apps:')
@@ -129,14 +135,18 @@ local function list_apps()
 end
 
 function funcs.info()
-    print('funcs:', join(fks, ', '))
+    print 'funcs:'
+    for _, c in ipairs(fks) do
+        local n, a = unpack(c)
+        local s, r = n:match('^(.)(.+)$')
+        local p = 'APP-NAME/No.'
+        echo(('\t\27[04m\27[01m%s\27[0m%s'):format(s, r))
+        print((a == 1 and ('\t[%s]'):format(p)) or
+            (a == 2 and ('\t<%s>'):format(p)) or '')
+    end
     print ''
-    -- print('SOCK:', SOCK)
-    -- print('STATE:', unit.DEFAULT_CONFIG.STATE)
-    -- print ''
     list_apps()
 end
-funcs.i = funcs.info
 
 function funcs.detail(app)
     if app then
@@ -144,13 +154,12 @@ function funcs.detail(app)
         print('env:',   inspect(app))
         print('app:',   inspect(cfg.app))
         print('ngx:',   inspect(cfg.ngx))
-        print('vhost:', cfg.vhost_p)
+        print('vhost:', pjson_encode(cfg.vhost))
     else
         print(inspect(config))
         list_apps()
     end
 end
-funcs.d = funcs.detail
 
 -- web 入口；其他方法是 shell 管理。
 function funcs.run(app)
@@ -178,104 +187,118 @@ function funcs.run(app)
     _G.unit_config = nil
 end
 
-function funcs.state(app)
-    -- echo_sh('cat '..unit.DEFAULT_CONFIG.STATE..'/conf.json')
-    local cmd = join({
-        'curl -s \\',
-        '   --unix-socket %s \\',
-        '   URL',
-    }, '\n')
-    cmd = cmd:format(SOCK)
-    print(cmd)
+local function get_vhost(echo)
+    local cmd = ([[curl -s --unix-socket '%s' URL]]):format(SOCK)
+    if echo then
+        print(cmd)
+    end
     local r = sh(cmd)
-    local cfg = jdec(r)
+    return (r and r ~= '') and jdec(r) or nil
+end
+
+function funcs.vhost(app)
+    -- echo_sh('cat '..unit.DEFAULT_CONFIG.STATE..'/conf.json')
+
+    local function prune(vhost, node)
+        if not vhost[node] then return end
+        for k, v in pairs(vhost[node]) do
+            if k ~= app.name or (node == 'listeners' and not v.pass:find(app.name)) then
+                vhost[node][k] = nil
+            end
+        end
+    end
+
+    local vhost = get_vhost(true)
+    if not vhost then
+        print ''
+        return
+    end
+    -- TODO hsq JSON 解码后是浮点数
+    for _, v in pairs((vhost.config or vhost).applications) do
+        v.processes = tointeger(v.processes)
+    end
     if app then
         -- print(inspect(app))
-        cfg = cfg.config or cfg
-        -- print(inspect(cfg))
-        for k, v in pairs(cfg.listeners) do
-            if not v.pass:find(app.name) then
-                cfg.listeners[k] = nil
-            end
-        end
-        for k, v in pairs(cfg.routes) do
-            if k ~= app.name then
-                cfg.routes[k] = nil
-            end
-        end
-        for k, v in pairs(cfg.applications) do
-            if k ~= app.name then
-                cfg.applications[k] = nil
-            end
-        end
-        print(pjson_encode(cfg))
+        vhost = vhost.config or vhost
+        -- print(inspect(vhost))
+        prune(vhost, 'listeners')
+        prune(vhost, 'routes')
+        prune(vhost, 'applications')
+        -- print(inspect(vhost))
+        print(pjson_encode(vhost))
     else
-        print(pjson_encode(cfg))
+        -- print(inspect(vhost))
+        print(pjson_encode(vhost))
 
         list_apps()
     end
 end
 
-function funcs.start()
-    echo_sh('unitd')
-end
-funcs.s = funcs.start
+function funcs.start()      echo_sh('unitd') end
+function funcs.quit()       echo_sh('pkill unitd') end
+function funcs.restart()    funcs.quit() funcs.start() end
 
-function funcs.quit()
-    echo_sh('pkill unitd')
-end
-funcs.q = funcs.quit
+local empty_vhost = {applications={},routes={['']={}},listeners={}}
 
-function funcs.restart()
-    funcs.quit()
-    funcs.start()
-end
-funcs.r = funcs.restart
-
--- curl -s -X PUT \
---     --unix-socket /usr/local/var/run/unit/control.sock \
---     --data-binary '{ "pass": "routes/lor" }' \
---     'http://URL/config/listeners/*:8888/'
 function funcs.update(app)
-    local data, filepath
-    local cmd = join({
-        'curl -s -X PUT \\',
-        '   --data-binary \'%s\' \\',
-        '   --unix-socket %s \\',
-        '   http://URL/config/',
-    }, '\n')
-    if app then
-        filepath = app.vhost_file
-        write_file(filepath, app_configs[app.name].vhost_p)
-        data = '@' .. filepath
-        cmd = cmd:format(data, SOCK)
-        -- TODO hsq 根据当前配置，选择分拆更新或整体更新。
-        -- TODO hsq 或者汇总各个 App 之后，比较更新！
+    local function update_part(vhost, node)
+        local cmd = [[curl -s -XPUT --data-binary '%s' --unix-socket '%s' \
+            URL/config/%s/%s]]
+        local key, value = next(vhost[node])
+        cmd = cmd:format(pjson_encode(value), SOCK, node, key)
+        -- echo_sh(cmd)
         print(cmd)
-        print 'TODO hsq NIY'
-        return
+        local r = sh(cmd)
+        return assert(jdec(r).success and r, r)
+    end
+
+    local function update(vhost, filepath, overwrite)
+        write_file(filepath, pjson_encode(vhost))
+        if overwrite then
+            local cmd = [[curl -s -X PUT --data-binary '%s' --unix-socket '%s' \
+                URL/config/]]
+            cmd = cmd:format('@' .. filepath, SOCK)
+            echo_sh(cmd)
+        else
+            local vhost0 = get_vhost()
+            vhost0 = vhost0 and (vhost0.config or vhost0)
+            if not vhost0 then
+                return update(vhost, filepath, true)
+            end
+            -- NOTE hsq 缺省没有 routes 节点： {"certificates": {},
+            --      "config": {"applications": {}, "listeners": {}}}
+            if not vhost0.routes then
+                update_part(empty_vhost, 'routes')
+            end
+            -- NOTE hsq 更新顺序根据依赖关系
+            -- NOTE hsq applications 重启 App 及其 Prototype 进程，routes/listeners 不会
+            local r
+            r = update_part(vhost, 'applications')
+            r = update_part(vhost, 'routes')
+            r = update_part(vhost, 'listeners')
+            print(r)
+        end
+    end
+
+    if app then
+        update(app_configs[app.name].vhost, app.vhost_file, false)
     else
-        local cfgs = {}
+        local vhost = {}
         for _, a in ipairs(config.apps) do
             for gk, gv in pairs(app_configs[a.name].vhost) do
-                local gvs = cfgs[gk]
+                local gvs = vhost[gk]
                 if not gvs then
                     gvs = {}
-                    cfgs[gk] = gvs
+                    vhost[gk] = gvs
                 end
                 for k, v in pairs(gv) do
                     gvs[k] = v
                 end
             end
         end
-        filepath = cfg_dir .. '/config.json'
-        write_file(filepath, pjson_encode(cfgs))
-        data = '@' .. filepath
-        cmd = cmd:format(data, SOCK)
+        update(vhost, cfg_dir .. '/config.json', true)
     end
-    echo_sh(cmd)
 end
-funcs.u = funcs.update
 
 function funcs.get(app)
     assert(app)
@@ -283,9 +306,11 @@ function funcs.get(app)
     -- local cmd = 'curl -s -H"cookie: a=b" "http://%s:%s/%s"'
     local cmd = 'curl -s -b"a=b" "http://%s:%s/%s"'
     echo_sh(cmd:format(app.host, app.port, path))
-
 end
-funcs.g = funcs.get
+
+for _, c in ipairs(fks) do
+    funcs[c[1]:sub(1, 1)] = funcs[c[1]]
+end
 
 
 assert(funcs[func], 'Invalid function')(target_app, select(3, ...))

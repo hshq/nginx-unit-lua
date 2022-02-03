@@ -70,16 +70,16 @@ And several application processes, and various processes communicate with each o
     - Execute `./unitd.lua` for management, you can specify the following commands:
         - `[i[nfo]]`
             Default command, view the list of available commands and registered apps
-        - `state [APP-NAME/No.]`
-            View the current vhost configuration of UNIT in JSON format
         - `r[estart], s[tart], q[uit]`
             Manage unitd
+        - `v[host] [APP-NAME/No.]`
+            View the current vhost configuration of UNIT in JSON format
         - `d[etail] [APP-NAME/No.]`
             If there is no parameter, all the registered apps' information will be listed.
             If the app parameter is specified, its registration information, configuration information, NGX configuration and vhost configuration will be displayed.
-        - `u[pdate]`
+        - `u[pdate] [APP-NAME/No.]`
             Process and update the vhosts configuration of the UNIT.
-        - `g[et]`
+        - `g[et] <APP-NAME/No.>`
             Get request test
 
 

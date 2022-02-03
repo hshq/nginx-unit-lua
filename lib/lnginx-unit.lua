@@ -1,7 +1,7 @@
 local utils = require 'utils'
 
 local _G         = _G
-local exportable = exportable
+local exportable = _G.exportable
 
 local core  = exportable 'lnginx-unit.core'
 
@@ -24,7 +24,7 @@ local function check_level(level)
         lv = LOG_LEVEL[lv:upper()]
     end
     if not lv or not LOG_LEVEL[lv] then
-        c_log(LOG_LEVEL.ALERT, ('Invalid log level：%s'):format(level))
+        c_log(LOG_LEVEL.ALERT, ('Invalid log level: %s'):format(level))
         return
     end
     return lv
@@ -34,11 +34,8 @@ end
 local function log(level, fmt, ...)
     fmt = tostring(fmt)
     local lv = check_level(level)
-    if lv then
-        if lv == LOG_LEVEL.DEBUG and not _G.DEBUG then
-            -- TODO hsq 应该在 core.log 中处理。
-            return
-        end
+    -- TODO hsq DEBUG 应该在 core.log 中处理。
+    if lv and (lv ~= LOG_LEVEL.DEBUG or not _G.DEBUG) then
         if select('#', ...) == 0 then
             -- NOTE hsq fmt 中可能有 % 字符: bad argument #1 to 'format' (no value)
             -- TODO hsq 以及 ngx.log

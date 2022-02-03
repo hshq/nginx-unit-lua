@@ -69,16 +69,16 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
     - 执行 `./unitd.lua` 进行管理，可指定如下命令：
         - `[i[nfo]]`
             缺省命令，查看可用命令、注册的 App 列表
-        - `state [APP-NAME/No.]`
-            查看当前 UNIT 的 vhost 配置， JSON 格式
         - `r[estart], s[tart], q[uit]`
             管理 unitd
+        - `v[host] [APP-NAME/No.]`
+            查看当前 UNIT 的 vhost 配置， JSON 格式
         - `d[etail] [APP-NAME/No.]`
             无参列举注册的 App 信息，
             参数指定 App 则显示其注册信息、配置信息、 ngx 配置和 vhost 配置。
-        - `u[pdate]`
+        - `u[pdate] [APP-NAME/No.]`
             处理配置并更新 UNIT 的 vhost 配置。
-        - `g[et]`
+        - `g[et] <APP-NAME/No.>`
             GET 请求测试
 
 
