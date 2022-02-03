@@ -1,14 +1,21 @@
 local utils = require 'utils'
+
+local _G         = _G
+local exportable = exportable
+
 local core  = exportable 'lnginx-unit.core'
 
-local c_log, LOG_LEVEL, c_init = core 'log, LOG_LEVEL, init'
+local c_log, LOG_LEVEL = core 'log, LOG_LEVEL'
 -- local c_req_log = core.req_log
 
-local type, select = _G 'type, select'
+local type, pairs, select, tostring = _G 'type, pairs, select, tostring'
 
 
 table.new = table.new or core.table_new
 package.loaded['table.new'] = table.new
+
+
+local _ENV = {}
 
 
 local function check_level(level)
@@ -17,7 +24,7 @@ local function check_level(level)
         lv = LOG_LEVEL[lv:upper()]
     end
     if not lv or not LOG_LEVEL[lv] then
-        c_log(LOG_LEVEL.ALERT, ('log 等级无效：%s'):format(level))
+        c_log(LOG_LEVEL.ALERT, ('Invalid log level：%s'):format(level))
         return
     end
     return lv
@@ -28,6 +35,10 @@ local function log(level, fmt, ...)
     fmt = tostring(fmt)
     local lv = check_level(level)
     if lv then
+        if lv == LOG_LEVEL.DEBUG and not _G.DEBUG then
+            -- TODO hsq 应该在 core.log 中处理。
+            return
+        end
         if select('#', ...) == 0 then
             -- NOTE hsq fmt 中可能有 % 字符: bad argument #1 to 'format' (no value)
             -- TODO hsq 以及 ngx.log
@@ -45,7 +56,7 @@ local function make_log(level)
 end
 
 
-local mod = {
+local _M = {
     log    = log,
     alert  = make_log(LOG_LEVEL.ALERT),
     err    = make_log(LOG_LEVEL.ERR),
@@ -54,11 +65,8 @@ local mod = {
     info   = make_log(LOG_LEVEL.INFO),
     debug  = make_log(LOG_LEVEL.DEBUG),
 }
-if not _G.DEBUG then
-    mod.debug = function(...) end
-end
 
-for k, v in pairs(mod) do
+for k, v in pairs(_M) do
     core[k] = v
 end
 return exportable(core)

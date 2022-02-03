@@ -8,8 +8,8 @@ local getenv  = os.getenv
 
 local ver = _VERSION:match('^Lua (.+)$')
 
--- TODO hsq 加入局部变量限制代码；以及其他文件。
-local _ENV = {} -- setfenv(1, {})
+
+local _ENV = {}
 
 
 local unit_dir      = getenv('PWD')

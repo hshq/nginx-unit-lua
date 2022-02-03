@@ -1,13 +1,16 @@
 -- XXX 放在系统路径中
 -- XXX 加载后，在字符串元表中注册了一些方法
 
-local api = require 'utils.adapter'
+local api   = require 'utils.adapter'
 
 local type         = type
+local next         = next
 local pairs        = pairs
+local ipairs       = ipairs
 local error        = error
 local assert       = assert
 local require      = require
+local loaded       = package.loaded
 local getmetatable = getmetatable
 local setmetatable = setmetatable
 local push         = table.insert
@@ -16,6 +19,10 @@ local join         = table.concat
 local unpack       = table.unpack
 local io_popen     = io.popen
 local io_open      = io.open
+local _G           = _G
+
+
+local _ENV = {}
 
 
 local function write_file(file, content)
@@ -142,6 +149,7 @@ local function export(mod, fields)
     return unpack(fs)
 end
 
+-- NOTE hsq 可用于代替 require
 -- @mod string|table
 -- return table
 local function exportable(mod)
@@ -177,7 +185,7 @@ end
 -- end
 
 
-for k, v in pairs(package.loaded) do
+for _, v in pairs(loaded) do
     if type(v) == 'table' then
         exportable(v)
     end
@@ -207,4 +215,4 @@ local _M = exportable {
     split = split,
 }
 
-return extend(_M, api)
+return _G.extend(_M, api)

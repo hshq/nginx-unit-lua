@@ -9,13 +9,18 @@ local PADDING = ' '
 local base = require 'utils.base'
 
 local push, pop, join = base 'push, pop, join'
-local type, next, pairs, ipairs, assert = _G 'type, next, pairs, ipairs, assert'
+local type, next, pairs, ipairs, assert =
+    _G 'type, next, pairs, ipairs, assert'
 local fmt = string.format
 
 
+local _ENV = {}
+
+
+-- JSON 编码，并格式化。
 return function(task)
     -- NOTE hsq boolean 类型不能这样处理
-    local COMPACT = task.COMPACT  or COMPACT
+    local COMPACT = task.COMPACT or COMPACT
     local INDENT  = task.INDENT  or INDENT
     -- local PADDING = task.PADDING or PADDING
 
@@ -86,7 +91,7 @@ return function(task)
             local cnt = #val
             if cnt == 0 then -- hash
                 add'{\n'
-                indent('->')
+                indent'->'
                 cnt = #buf
                 for k, v in pairs(val) do
                     assert(type(k) == 'string', 'Field name must be a string')
@@ -101,11 +106,11 @@ return function(task)
                 if #buf > cnt then
                     pop(buf); line_feed(COMPACT==0)
                 end
-                indent('<-')
+                indent'<-'
                 padding(COMPACT==0); add'}'
             else -- vector
                 add'[\n'
-                indent('->')
+                indent'->'
                 for i, v in ipairs(val) do
                     local vec1_is_obj = i==1 and COMPACT>1
                     padding(); format(v, vec1_is_obj); add',\n'
@@ -113,7 +118,7 @@ return function(task)
                 if cnt > 0 then
                     pop(buf); line_feed(COMPACT==0)
                 end
-                indent('<-')
+                indent'<-'
                 padding(COMPACT==0); add']'
                 assert(not next(val, cnt), 'Arrays and hash tables cannot be mixed')
             end

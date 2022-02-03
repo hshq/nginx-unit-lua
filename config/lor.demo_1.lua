@@ -3,12 +3,16 @@
 -- NOTE hsq unit.debug(...) 开关。
 local DEBUG   = true
 
-local USE_JIT = true
+local USE_JIT = false
 -- if _G.USE_JIT ~= nil then
 --     USE_JIT = _G.USE_JIT
 -- end
 
 local app = _G.app
+
+
+local _ENV = {}
+
 
 local config = {}
 
@@ -62,6 +66,7 @@ config.vhost = {
         },},
     routes = {
         [app.name] = {
+            -- TODO hsq favicon.ico 404 ，以及 vanilla
             {   match  = { uri = {'*.ico'} },
                 action = { share = 'app/static$uri', },},
             {   match  = { uri = '~^/.*$', }, -- '~^/(hello)?$'

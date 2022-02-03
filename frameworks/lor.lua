@@ -1,5 +1,17 @@
 #!/usr/bin/env lua5.4
 
+local require  = require
+local dofile   = dofile
+local assert   = assert
+local error    = error
+local exit     = os.exit
+local _VERSION = _VERSION
+local _G       = _G
+
+
+local _ENV = {}
+
+
 local unit_config = _G.unit_config
 _G.unit_config = nil
 
@@ -17,7 +29,8 @@ local lua_ver = utils.is_jit and (_G['jit'].version:match('^(.-)%-')) or _VERSIO
 
 
 local function request_handler(req)
-    _G.ngx = make_ngx(ngx_cfg, req)
+    local ngx = make_ngx(ngx_cfg, req)
+    _G.ngx = ngx
 
     -- NOTE hsq require 保证 METHOD(Location) 只注册一次，重复会报错。
     -- local app = require('app.server')
@@ -62,4 +75,4 @@ unit.info(lua_ver)
 check(ctx:run())
 
 ctx:done()
-os.exit(true, true)
+exit(true, true)

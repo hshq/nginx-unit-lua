@@ -4,12 +4,21 @@ local ngx_const = require 'ngx.const'
 local datetime  = require 'ngx.datetime'
 local todo      = require 'ngx.todo'
 
-local type = type
-local join = utils.join
+local exportable = exportable
+local extend     = extend
+local join       = utils.join
+
+local type, ipairs, tostring, assert, error =
+    _G 'type, ipairs, tostring, assert, error'
 
 local NGX_LOG_LEVEL = ngx_const.NGX_LOG_LEVEL
 local logs          = ngx_const.logs
 local null          = ngx_const.null
+
+local _G = _G
+
+
+local _ENV = {}
 
 
 local _M = exportable {
@@ -47,6 +56,8 @@ end
 --      ngx.say("This is our own content")
 --      ngx.exit(ngx.HTTP_OK)
 function _M.exit(status)
+    -- TODO hsq 放在上面似乎没用， ngx == nil 。
+    local ngx = _G.ngx
     if status == ngx.OK then -- 退出当前 phase ，进入后续。
         status = ngx.HTTP_OK
     elseif status == ngx.ERROR then

@@ -4,8 +4,10 @@ local ngx_const = require 'ngx.const'
 local ngx_proto = require 'ngx.proto'
 
 
-local require, type, pairs, ipairs, rawget, rawset, tostring, setmetatable =
-    _G 'require, type, pairs, ipairs, rawget, rawset, tostring, setmetatable'
+local extend = extend
+local require, assert, error = _G 'require, assert, error'
+local next, type, pairs, ipairs, rawget, rawset, tostring, setmetatable =
+    _G 'next, type, pairs, ipairs, rawget, rawset, tostring, setmetatable'
 local tointeger = math.tointeger
 local lower     = string.lower
 
@@ -27,6 +29,10 @@ local push, clear, join, map, clone, readonly, parseQuery =
 -- local ppid = unit.getppid()
 local pid  = utils.getpid()
 local ppid = utils.getppid()
+
+
+local _ENV = {}
+
 
 -- TODO hsq 可根据 cfg 初始化一次，反复使用，而非每个请求都调用？是否有效果？
 --      需要注意隔离请求私有数据，如 ngx_req

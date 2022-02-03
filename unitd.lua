@@ -9,14 +9,37 @@ local ver = _VERSION:match('^Lua (.+)$')
 local func, target_app = ...
 func = func or 'info'
 
+
+local require        = require
+local package        = package
+local assert         = assert
+local ipairs         = ipairs
+local pairs          = pairs
+local dofile         = dofile
+local print          = print
+local type           = type
+local next           = next
+local tonumber       = tonumber
+local select         = select
+local collectgarbage = collectgarbage
+local getenv         = os.getenv
+local join           = table.concat
+local _G             = _G
+
+
+-- NOTE hsq 只在 Lua5.4 限制并充分测试即可
+-- setfenv(1, {})
+local _ENV = {}
+
+
 -- TODO hsq 共享模块加载路径，至少是基础模块。
 -- NOTE hsq 相对路径易出问题。
-package.path = table.concat({
+package.path = join({
     lib_dir .. '/?.lua',
     cfg_dir .. '/?.lua',
     package.path,
 }, ';')
-package.cpath = table.concat({
+package.cpath = join({
     -- Sys, Nginx-Unit, Auxiliary module, ...
     lib_dir .. '/'..ver..'/?.so',
     package.cpath,
@@ -28,13 +51,15 @@ local config = require 'config'
 local utils   = require 'utils'
 local unit    = require 'lnginx-unit'
 local cjson   = require 'cjson'
-local pjson   = require 'prettify_json'
 local inspect = require 'inspect'
+
+local jdec = cjson.decode
+-- local jenc = cjson.encode
 
 -- TODO hsq 用法还是繁琐；而且不方便注释掉；
 -- TODO hsq 只在入口处导入 utils.base 。
-local sh, join, is_jit, write_file, setcwd =
-    utils 'sh, join, is_jit, write_file, setcwd'
+local sh, join, is_jit, write_file, setcwd, pjson =
+    utils 'sh, join, is_jit, write_file, setcwd, pjson'
 
 
 local app_configs = {}
@@ -56,7 +81,8 @@ for i, app in ipairs(config.apps) do
     -- _G.USE_JIT = app.use_jit
     _G.app = app
     -- TODO hsq 配置文件中也有加载路径处理，重复了；或者将其作为模块来加载？
-    local config_data = assert(loadfile(assert(app.config_file)))()
+    -- local config_data = assert(loadfile(assert(app.config_file)))()
+    local config_data = assert(dofile(assert(app.config_file)))
     _G.app = nil
     -- local config_data = `./$(app.config_file) -j -u`
 
@@ -68,7 +94,7 @@ for i, app in ipairs(config.apps) do
     app.host, app.port = next(config_data.vhost.listeners):match('(.+):(.+)')
     app.host = (app.host == '*') and 'localhost' or app.host
 
-    -- local config_str = cjson.encode(config_data.vhost)
+    -- local config_str = jenc(config_data.vhost)
     -- -- NOTE hsq unit 收到配置字串会自动过滤
     -- config_str = config_str:gsub('\\/', '/')
 
@@ -128,7 +154,7 @@ funcs.d = funcs.detail
 
 -- web 入口；其他方法是 shell 管理。
 function funcs.run(app)
-    assert(os.getenv('NXT_UNIT_INIT'), 'Not executable in shell')
+    assert(getenv('NXT_UNIT_INIT'), 'Not executable in shell')
     -- assert(app)
     if not app then
         list_apps()
@@ -146,8 +172,8 @@ function funcs.run(app)
     _G.unit_config = app_configs[app.name]
 
     local entry = assert(app.entry) -- assert(app.framework.entry)
+    -- assert(loadfile(entry))()
     dofile(entry)
-    -- assert(loadfile(entry, 'bt', _G))()
 
     _G.unit_config = nil
 end
@@ -162,7 +188,7 @@ function funcs.state(app)
     cmd = cmd:format(SOCK)
     print(cmd)
     local r = sh(cmd)
-    local cfg = cjson.decode(r)
+    local cfg = jdec(r)
     if app then
         -- print(inspect(app))
         cfg = cfg.config or cfg

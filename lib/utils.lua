@@ -1,8 +1,25 @@
-local base = require 'utils.base'
 
+local require = require
+
+local base  = require 'utils.base'
+local pjson = require 'utils.prettify_json'
+
+local extend     = extend
+local exportable = exportable
+-- local _G = _G
+
+local type, assert, pairs, ipairs, tonumber, tostring, string =
+    _G 'type, assert, pairs, ipairs, tonumber, tostring, string'
+local char, upper = string 'char, upper'
 local push, join = base 'push, join'
 
-local _M = exportable {}
+
+local _ENV = {}
+
+
+local _M = exportable {
+    pjson = pjson,
+}
 
 extend(_M, (require 'utils.ffi'))
 extend(_M, base)
@@ -11,8 +28,6 @@ extend(_M, (require 'lcodec'))
 _M.set_base64_codec(_M.base64_codec.avx2)
 
 
-local type, pairs, ipairs, tonumber = _G 'type, pairs, ipairs, tonumber'
-local char, upper = string 'char, upper'
 local md5 = _M.md5
 
 

@@ -1,7 +1,12 @@
 local utils = require 'utils'
 
+local exportable = exportable
 local os_date    = os.date
+local os_time    = os.time
 local parse_time = utils.parse_time
+
+
+local _ENV = {}
 
 
 -- NOTE hsq strftime
@@ -41,7 +46,7 @@ local function today()
     return os_date('%F') -- %Y-%m-%d
 end
 
-local time = os.time
+local time = os_time
 
 -- @all? 缺省 false ，返回当前时间戳，浮点数，<秒.毫秒>；
 --      true 则返回 秒 微秒 本地时区 是否有夏令时(并非现在处于)

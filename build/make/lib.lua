@@ -29,10 +29,15 @@ local function gen(target, inc_file, debug)
     local config = _M.env(require(target .. '.make'))
     config.DEBUG = debug
 
+    -- NOTE hsq 在 inc_file 中使用 _ENV ：
     if is_jit then
+        -- NOTE hsq 若 Lua5.4 用此法，在 inc_file 中直接使用 _ENV 得到的是 _G ，
+        --      因此需要先 local _ENV = _G._ENV 。
         _G._ENV = config
         config = assert(loadfile(inc_file))()
+        _G._ENV = nil
     else
+        -- NOTE hsq 缺省第三参是 _G
         config = assert(loadfile(inc_file, 'bt', config))()
     end
 

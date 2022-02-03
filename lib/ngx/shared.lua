@@ -1,9 +1,12 @@
 local ngx_const    = require 'ngx.const'
 local ngx_datetime = require 'ngx.datetime'
 
-local type       = type
+local type, pairs, setmetatable = _G 'type, pairs, setmetatable'
 local calc_units = ngx_const.calc_units
 local now        = ngx_datetime.now
+
+
+local _ENV = {}
 
 
 local config = {}

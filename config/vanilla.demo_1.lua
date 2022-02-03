@@ -10,6 +10,10 @@ local USE_JIT = false
 
 local app = _G.app
 
+
+local _ENV = {}
+
+
 local config = {}
 
 config.app = {

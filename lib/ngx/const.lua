@@ -1,8 +1,12 @@
 local cjson = require 'cjson'
 local unit  = require 'lnginx-unit'
 
-local tointeger = math.tointeger
-local pairs, ipairs  = _G 'pairs, ipairs'
+local exportable = exportable
+local tointeger  = math.tointeger
+local pairs, ipairs, error, tonumber = _G 'pairs, ipairs, error, tonumber'
+
+
+local _ENV = {}
 
 
 local NGX_LOG_LEVEL = { [0] = 'STDERR',

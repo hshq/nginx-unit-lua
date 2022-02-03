@@ -1,5 +1,19 @@
 #!/usr/bin/env lua5.4
 
+local require  = require
+local dofile   = dofile
+local type     = type
+local pcall    = pcall
+local assert   = assert
+local error    = error
+local exit     = os.exit
+local _VERSION = _VERSION
+local _G       = _G
+
+
+local _ENV = {}
+
+
 local unit_config = _G.unit_config
 _G.unit_config = nil
 
@@ -34,7 +48,8 @@ end
 local function protect_request_handler(req)
     -- TODO hsq 请求之间共享 ngx ，内部状态需要清理！
     -- _G.ngx = _G.ngx or make_ngx(ngx_cfg, req)
-    _G.ngx =  make_ngx(ngx_cfg, req)
+    local ngx = make_ngx(ngx_cfg, req)
+    _G.ngx = ngx
     local ok, status = pcall(request_handler, req)
     if not ok then
         -- unit.err((require 'inspect'){'status:', status})
@@ -43,7 +58,7 @@ local function protect_request_handler(req)
         else
             -- TODO hsq 报错格式；然后与 lor 合并？
             status = status:gsub('\\([nt])', {n = '\n', t = '\t'})
-            unit.err((require 'inspect'){'status:', package.path, status})
+            unit.err((require 'inspect'){'status:', _G.package.path, status})
             status = ngx.HTTP_INTERNAL_SERVER_ERROR
         end
     end
@@ -68,4 +83,4 @@ unit.info(lua_ver)
 check(ctx:run())
 
 ctx:done()
-os.exit(true, true)
+exit(true, true)

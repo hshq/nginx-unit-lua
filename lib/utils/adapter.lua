@@ -1,5 +1,14 @@
 
+local _VERSION = _VERSION
+local table    = table
+local math     = math
+local _G       = _G
+
 local floor = math.floor
+
+
+local _ENV = {}
+
 
 -- 纯粹为了避免语言服务器提示问题
 local function get_global(name)

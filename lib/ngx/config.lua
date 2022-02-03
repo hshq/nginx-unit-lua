@@ -1,7 +1,12 @@
 local base = require 'utils.base'
 
+local exportable = exportable
+
 local clone = base.clone
 local pairs, type, assert = _G 'pairs, type, assert'
+
+
+local _ENV = {}
 
 
 local _M = exportable {

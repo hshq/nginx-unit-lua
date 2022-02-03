@@ -10,6 +10,11 @@ local tonumber = tonumber
 local assert   = assert
 local type     = type
 
+
+local _ENV = {}
+
+
+-- TODO hsq FFI 实现 lcodec ？
 -- TODO hsq 如何直接调用 Lua API(需传入 lua_State *)，以及传出栈顶的值作为返回值？
 
 
@@ -61,7 +66,7 @@ end
 
 -- @overwrite? boolean [true]
 local function setenv(name, value, overwrite)
-    assert(type(name) == 'string')
+    assert(type(name)  == 'string')
     assert(type(value) == 'string')
     overwrite = overwrite ~= false
     if C.setenv(name, value, overwrite) == 0 then
