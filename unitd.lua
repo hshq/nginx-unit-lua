@@ -1,10 +1,11 @@
 #!/usr/bin/env lua5.4
 
-local pwd     = os.getenv('PWD')
-local lib_dir = pwd .. '/lib'
-local cfg_dir = pwd .. '/config'
+local unit_dir = os.getenv('PWD')
+local lib_dir  = unit_dir .. '/lib'
+local cfg_dir  = unit_dir .. '/config'
 
-local ver = _VERSION:match('^Lua (.+)$')
+local _VERSION = _VERSION
+local ver      = _VERSION:match('^Lua (.+)$')
 
 local func, target_app = ...
 func = func or 'info'
@@ -13,6 +14,8 @@ func = func or 'info'
 local require        = require
 local package        = package
 local assert         = assert
+local error          = error
+local pcall          = pcall
 local ipairs         = ipairs
 local pairs          = pairs
 local dofile         = dofile
@@ -24,6 +27,7 @@ local tointeger      = math.tointeger
 local select         = select
 local collectgarbage = collectgarbage
 local getenv         = os.getenv
+local exit           = os.exit
 local echo           = io.write
 local join           = table.concat
 local unpack         = table.unpack
@@ -40,6 +44,7 @@ local _ENV = {}
 package.path = join({
     lib_dir .. '/?.lua',
     cfg_dir .. '/?.lua',
+    unit_dir .. '/?.lua', -- 用于加载 App 入口
     package.path,
 }, ';')
 package.cpath = join({
@@ -84,6 +89,7 @@ for i, app in ipairs(config.apps) do
     -- _G.USE_JIT = app.use_jit
     _G.app = app
     -- TODO hsq 配置文件中也有加载路径处理，重复了；或者将其作为模块来加载？
+    -- NOTE hsq loadfile(nil) 卡住，需要检查参数非 nil 。
     -- local config_data = assert(loadfile(assert(app.config_file)))()
     local config_data = assert(dofile(assert(app.config_file)))
     _G.app = nil
@@ -159,32 +165,6 @@ function funcs.detail(app)
         print(inspect(config))
         list_apps()
     end
-end
-
--- web 入口；其他方法是 shell 管理。
-function funcs.run(app)
-    assert(getenv('NXT_UNIT_INIT'), 'Not executable in shell')
-    -- assert(app)
-    if not app then
-        list_apps()
-        return
-    end
-    -- funcs.detail(app)
-
-    package.path  = app.path
-    package.cpath = app.cpath
-    -- assert(setcwd(app.dir))
-
-    collectgarbage('collect')
-    collectgarbage('collect')
-
-    _G.unit_config = app_configs[app.name]
-
-    local entry = assert(app.entry) -- assert(app.framework.entry)
-    -- assert(loadfile(entry))()
-    dofile(entry)
-
-    _G.unit_config = nil
 end
 
 local function get_vhost(echo)
@@ -311,6 +291,87 @@ end
 for _, c in ipairs(fks) do
     funcs[c[1]:sub(1, 1)] = funcs[c[1]]
 end
+
+
+-- {{{ === === === === === === === === === === === === === === === === ===
+-- TODO hsq 独立出来，共享配置处理？
+local function unit_check(ret, rc, err)
+    return ret and ret or
+        error(('[%d]%s'):format(err or 'Failed!', err, rc), 2)
+end
+
+-- web 入口；其他方法是 shell 管理。
+function funcs.run(app)
+    assert(getenv('NXT_UNIT_INIT'), 'Not executable in shell')
+
+    local app_entry = require('frameworks.' .. app.framework.name)
+
+    package.path  = app.path
+    package.cpath = app.cpath
+    -- assert(setcwd(app.dir))
+
+    local app_config = app_configs[app.name]
+    _G.DEBUG = app_config.app.DEBUG
+
+    local lua_ver = utils.is_jit and (_G['jit'].version:match('^(.-)%-')) or _VERSION
+
+    local ngx_cfg = (require 'ngx.config')(app_config)
+    local make_ngx = require 'ngx'
+
+    local function get_ngx(req)
+        -- TODO hsq get_ngx 可共享、缓存 ngx 对象？
+        local ngx = make_ngx(ngx_cfg, req)
+        _G.ngx = ngx
+        return ngx
+    end
+    local prelude = nil
+    -- 测试
+    local function epilogue(ngx)
+        -- X-Powered-By 添加 Lua 版本信息
+        local xpb = ngx.header.x_powered_by
+        -- xpb = xpb and (xpb .. ' on ' .. lua_ver) or lua_ver
+        xpb = xpb and {xpb, lua_ver} or lua_ver
+        ngx.header.x_powered_by = xpb
+    end
+
+    local function protect_request_handler(req)
+        -- TODO hsq 请求之间共享 ngx ，内部状态需要清理！
+        -- TODO hsq     不要在模块中绑定 ngx ： resty/template  。
+        -- _G.ngx = _G.ngx or get_ngx(req)
+        local ngx = get_ngx(req)
+        _G.ngx = ngx
+
+        if prelude then prelude(ngx) end
+
+        local ok, status = pcall(app_entry)
+        if not ok then
+            if type(status) == 'table' and status.from == 'ngx.exit' then
+                ok     = true
+                status = status.status
+            else
+                ngx.log(ngx.ERR, status:gsub('\\([nt])', {n = '\n', t = '\t'}))
+                status = ngx.HTTP_INTERNAL_SERVER_ERROR
+            end
+        end
+
+        if epilogue then epilogue(ngx) end
+
+        local content = ngx.get_response_content()
+        local headers = ngx.get_response_headers()
+        return status or ngx.status, content, headers
+    end
+
+    local ctx = unit_check(unit.init(protect_request_handler))
+    unit.info(lua_ver)
+
+    collectgarbage('collect')
+    collectgarbage('collect')
+
+    unit_check(ctx:run())
+    ctx:done()
+    exit(true, true)
+end
+-- }}} === === === === === === === === === === === === === === === === ===
 
 
 assert(funcs[func], 'Invalid function')(target_app, select(3, ...))

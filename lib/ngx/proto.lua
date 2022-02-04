@@ -56,7 +56,7 @@ end
 --      ngx.say("This is our own content")
 --      ngx.exit(ngx.HTTP_OK)
 function _M.exit(status)
-    -- TODO hsq 放在上面似乎没用， ngx == nil 。
+    -- TODO hsq 若放在 ngx.lua 中则 upvalue 中有 ngx 。
     local ngx = _G.ngx
     if status == ngx.OK then -- 退出当前 phase ，进入后续。
         status = ngx.HTTP_OK
@@ -64,14 +64,14 @@ function _M.exit(status)
         status = ngx.HTTP_INTERNAL_SERVER_ERROR
     end
     assert(type(status) == 'number' and status >= ngx.HTTP_OK)
+    -- 中断请求， status 传给 ngx 。
     -- TODO hsq ngx.exit 能否不用 error 来退出并传递信息？
     -- NOTE hsq 字符串/数字 会被前缀文件、代码行等位置信息。
-    return error({status = status}, 2) -- 中断请求， status 传给 ngx 。
+    return error({status = status, from = 'ngx.exit'}, 2)
 end
 
 
 function _M.log(level, ...)
-    local name = NGX_LOG_LEVEL[level]
     local args = {...}
     for i, arg in ipairs(args) do
         args[i] = arg == null and 'null' or tostring(arg)

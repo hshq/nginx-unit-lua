@@ -111,7 +111,7 @@ local vars = {
     -- TODO hsq 表内可引用自身字段会更方便（前向和后向）。
     for _, app in ipairs(cfg.apps) do
         local fw = cfg.frameworks[app.framework]
-        -- fw.name  = app.framework
+        fw.name  = app.framework
 
         local app_name = app.framework .. '.' .. app.name
         cfg.apps[app_name] = assert(not cfg.apps[app_name] and app) -- 检查命名冲突
@@ -120,7 +120,7 @@ local vars = {
         app.config_file = ('%s/%s.lua'):format(config_dir, app.name)
         app.vhost_file  = ('%s/%s.json'):format(config_dir, app.name)
         app.executable  = executable
-        app.entry       = ('%s/%s.lua'):format(framework_dir, app.framework)
+        -- app.entry       = ('%s/%s.lua'):format(framework_dir, app.framework)
 
         app.framework   = fw
         app.unit        = cfg.unit
