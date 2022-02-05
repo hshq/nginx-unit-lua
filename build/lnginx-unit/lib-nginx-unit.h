@@ -36,7 +36,7 @@
     return 2
 
 #define REF2PTR(ref) ((void *)(ptrdiff_t)ref)
-#define PTR2REF(ptr) ((int)(ptrdiff_t)ptr)
+#define PTR2REF(ptr) ((int)   (ptrdiff_t)ptr)
 
 
 typedef struct context_s {

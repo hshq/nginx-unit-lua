@@ -18,6 +18,13 @@ package.loaded['table.new'] = table.new
 local _ENV = {}
 
 
+local DEBUG = false
+
+local function enable_debug(on)
+    DEBUG = on and true or false
+end
+
+
 local function check_level(level)
     local lv = level
     if type(lv) == 'string' then
@@ -35,7 +42,7 @@ local function log(level, fmt, ...)
     fmt = tostring(fmt)
     local lv = check_level(level)
     -- TODO hsq DEBUG 应该在 core.log 中处理。
-    if lv and (lv ~= LOG_LEVEL.DEBUG or not _G.DEBUG) then
+    if lv and (lv ~= LOG_LEVEL.DEBUG or DEBUG) then
         if select('#', ...) == 0 then
             -- NOTE hsq fmt 中可能有 % 字符: bad argument #1 to 'format' (no value)
             -- TODO hsq 以及 ngx.log
@@ -54,6 +61,8 @@ end
 
 
 local _M = {
+    enable_debug = enable_debug,
+
     log    = log,
     alert  = make_log(LOG_LEVEL.ALERT),
     err    = make_log(LOG_LEVEL.ERR),

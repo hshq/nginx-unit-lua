@@ -6,7 +6,7 @@
 void request_handler(nxt_unit_request_info_t *req) {
     int rc;
     nxt_unit_request_t *r = req->request;
-    lua_State *L = req->unit->data;
+    lua_State *L          = req->unit->data;
     // context_t *uctx;
     request_t *ureq;
 

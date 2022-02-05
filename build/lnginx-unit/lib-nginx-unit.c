@@ -17,7 +17,7 @@ LUAMOD_API int lib_func_init(lua_State *L) {
     int rc;
 
     if (inited) {
-        RETURN_ERR_LITERAL("不可重复初始化！");
+        RETURN_ERR_LITERAL("Cannot initialize multiple times!");
     }
 
     luaL_checktype(L, 1, LUA_TFUNCTION);
@@ -27,7 +27,7 @@ LUAMOD_API int lib_func_init(lua_State *L) {
     lua_pushvalue(L, 1);
     rc = lua_setiuservalue(L, -2, 1);
     if (!rc) {
-        RETURN_ERR_LITERAL("设置请求处理函数失败！");
+        RETURN_ERR_LITERAL("Failed to set request processing function!");
     }
     luaL_setmetatable(L, MT_CONTEXT);
 
@@ -36,10 +36,11 @@ LUAMOD_API int lib_func_init(lua_State *L) {
     init.data = L;
     // main_ctx.data == uctx 的引用
     lua_pushvalue(L, -1);
+    // init.ctx_data -> req->ctx->data
     init.ctx_data = REF2PTR(luaL_ref(L, LUA_REGISTRYINDEX));
     uctx->ctx = nxt_unit_init(&init);
     if (!uctx->ctx) {
-        RETURN_ERR_LITERAL("初始化失败！");
+        RETURN_ERR_LITERAL("Initialization failed!");
     }
 
     inited = True;
@@ -155,7 +156,7 @@ LUAMOD_API int luaopen_unit_core(lua_State *L) {
     LUA_RIDX_STR_FORMAT = luaL_ref(L, LUA_REGISTRYINDEX);
 
     if (LUA_NOREF == LUA_RIDX_STR_FORMAT) {
-        #define ERR_NEED_STR_FORMAT "log() 需要 string.format(fmt, ...) ！"
+        #define ERR_NEED_STR_FORMAT "log() need string.format(fmt, ...) !"
         nxt_unit_log(NULL, NXT_UNIT_LOG_ALERT, ERR_NEED_STR_FORMAT);
         luaL_error(L, ERR_NEED_STR_FORMAT);
     }
