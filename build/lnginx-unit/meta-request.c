@@ -57,9 +57,10 @@ LUAMOD_API int req_mtd_fields(lua_State *L) {
             }
         }
         // TODO hsq skip 和 hopbyhop 如何处理？是否影响 max_fields ？
-        // NOTE hsq fields_hopbyhop 只可能有：
+        // NOTE hsq fields_hopbyhop 只有 8 个：
         //      Connection Keep-Alive Proxy-Authenticate Proxy-Authorization
         //      Trailer TE Transfer-Encoding Upgrade
+        //      Content-Length 也被 Nginx 处理，比如发送 chunked 编码，见 resty/http 模块。
         flags = f->skip | (f->hopbyhop << 1);
         if (flags) {
             lua_pushinteger(L, flags);

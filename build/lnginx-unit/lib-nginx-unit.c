@@ -32,6 +32,7 @@ LUAMOD_API int lib_func_init(lua_State *L) {
     luaL_setmetatable(L, MT_CONTEXT);
 
     init.callbacks.request_handler = request_handler;
+    init.callbacks.close_handler   = close_handler;
     // main_ctx.unit.data = L
     init.data = L;
     // main_ctx.data == uctx 的引用

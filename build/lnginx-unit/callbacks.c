@@ -95,7 +95,7 @@ void request_handler(nxt_unit_request_info_t *req) {
 
     rc = nxt_unit_response_init(req, status, max_fields_count, max_fields_size);
     if (NXT_UNIT_OK != rc) {
-        nxt_unit_alert(NULL, "%s 失败！", "response_init");
+        nxt_unit_alert(NULL, "%s failed!", "response_init");
         nxt_unit_request_done(req, NXT_UNIT_ERROR);
     }
 
@@ -106,7 +106,7 @@ void request_handler(nxt_unit_request_info_t *req) {
         value = lua_tolstring(L, -1, &value_len);
         rc = nxt_unit_response_add_field(req, name, name_len, value, value_len);
         if (NXT_UNIT_OK != rc) {
-            nxt_unit_alert(NULL, "%s 失败(%*s: %*s)！", "add_field",
+            nxt_unit_alert(NULL, "%s failed(%*s: %*s)!", "add_field",
                     (int)name_len, name, (int)value_len, value);
             lua_pop(L, 2);
             nxt_unit_request_done(req, NXT_UNIT_ERROR);
@@ -117,13 +117,13 @@ void request_handler(nxt_unit_request_info_t *req) {
 
     rc = nxt_unit_response_add_content(req, content, content_length);
     if (NXT_UNIT_OK != rc) {
-        nxt_unit_alert(NULL, "%s 失败！", "add_content");
+        nxt_unit_alert(NULL, "%s failed!", "add_content");
         nxt_unit_request_done(req, NXT_UNIT_ERROR);
     }
 
     rc = nxt_unit_response_send(req);
     if (NXT_UNIT_OK != rc) {
-        nxt_unit_alert(NULL, "%s 失败！", "response_send");
+        nxt_unit_alert(NULL, "%s failed!", "response_send");
         nxt_unit_request_done(req, NXT_UNIT_ERROR);
     }
 

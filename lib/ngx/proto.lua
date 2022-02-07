@@ -8,14 +8,13 @@ local exportable = exportable
 local extend     = extend
 local join       = utils.join
 
+local _G = _G
+
 local type, ipairs, tostring, assert, error =
     _G 'type, ipairs, tostring, assert, error'
 
-local NGX_LOG_LEVEL = ngx_const.NGX_LOG_LEVEL
-local logs          = ngx_const.logs
-local null          = ngx_const.null
-
-local _G = _G
+local logs = ngx_const.logs
+local null = ngx_const.null
 
 
 local _ENV = {}
@@ -54,9 +53,9 @@ end
 --  代码片段：反馈自定内容的错误页
 --      ngx.status = ngx.HTTP_GONE -- 410 Gone
 --      ngx.say("This is our own content")
---      ngx.exit(ngx.HTTP_OK)
+--      return ngx.exit(ngx.HTTP_OK)
 function _M.exit(status)
-    -- TODO hsq 若放在 ngx.lua 中则 upvalue 中有 ngx 。
+    -- TODO hsq 若放在 ngx.lua 中则 upvalue 中有 ngx 。搜索 _G.ngx 。
     local ngx = _G.ngx
     if status == ngx.OK then -- 退出当前 phase ，进入后续。
         status = ngx.HTTP_OK

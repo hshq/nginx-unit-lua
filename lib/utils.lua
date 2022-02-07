@@ -76,6 +76,7 @@ end
 
 -- @typ? 2: 作为 URI 部件, 0: 作为完整 URI
 local function escape_uri(str, typ)
+    str = tostring(str)
     if not typ or typ == 2 then
         return (str:gsub('.', char2escape_uri_c))
     elseif typ == 0 then

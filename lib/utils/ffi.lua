@@ -6,9 +6,13 @@ local Cnew   = ffi.new
 local Cstr   = ffi.string
 local Cerrno = ffi.errno
 
-local tonumber = tonumber
-local assert   = assert
-local type     = type
+require 'utils.adapter'
+local ERRNO = require 'utils.ffi_errno'
+
+local tonumber  = tonumber
+local tointeger = math.tointeger
+local assert    = assert
+local type      = type
 
 
 local _ENV = {}
@@ -17,6 +21,7 @@ local _ENV = {}
 -- TODO hsq FFI 实现 lcodec ？
 -- TODO hsq 如何直接调用 Lua API(需传入 lua_State *)，以及传出栈顶的值作为返回值？
 
+-- TODO hsq C 声明语句单独放在 ffi.h 文件中？便于直接进入系统头文件。
 
 -- NOTE hsq ffi.new('char *', nil) == nil ，
 --      但是 strptime 出错时的结果是 cdata<char*>: 0x0 ， ~= nil 。
@@ -33,11 +38,11 @@ Cdef [[
     char *strerror(int errnum);
 ]]
 
-local function Cerr()
-    -- return Cstr(C.strerror(C.errno))
+local function Cerr(errno)
+    -- return Cstr(C.strerror(errno or C.errno))
     -- NOTE hsq setenv('', 'will fail') 根据 man(3) 应该报错 EINVAL ，
     --      C.errno 报错 EAGAIN 。
-    return Cstr(C.strerror(Cerrno()))
+    return Cstr(C.strerror(errno or Cerrno()))
 end
 
 
@@ -154,6 +159,45 @@ local function now(all)
     end
 end
 
+Cdef [[
+    struct timespec {
+        time_t tv_sec;	/* seconds */
+        long tv_nsec;	/* nanoseconds */
+    };
+    unsigned int sleep(unsigned int seconds);
+    int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+]]
+
+-- return int 剩余时间
+local function sleep(seconds)
+    seconds = tointeger(seconds)
+    assert(seconds and seconds >= 0)
+    return C.sleep(seconds)
+end
+
+local function nanosleep(seconds, nanoseconds)
+    seconds     = tointeger(seconds)     or 0
+    nanoseconds = tointeger(nanoseconds) or 0
+    assert(seconds >= 0 and nanoseconds >= 0 and nanoseconds < 1000000000
+        --[[ and seconds + nanoseconds > 0 ]])
+
+    -- local req = Cnew('struct timespec');
+    -- local rest = Cnew('struct timespec');
+    local tps = Cnew('struct timespec[2]');
+    local req, rest = tps[1], tps[2]
+    req.tv_sec, req.tv_nsec = seconds, nanoseconds
+    local r = C.nanosleep(req, rest)
+    if r == 0 then
+        return true
+    end
+    local errno = Cerrno()
+    if errno == ERRNO.EINTR then
+        return {seconds = rest[1], nanoseconds = rest[2]}, Cerr(errno)
+    else
+        return nil, Cerr(errno) -- ERRNO.EINVAL
+    end
+end
+
 
 return {
     getpid  = getpid,
@@ -164,4 +208,6 @@ return {
 
     parse_time = parse_time,
     now        = now,
+    sleep      = sleep,
+    nanosleep  = nanosleep,
 }

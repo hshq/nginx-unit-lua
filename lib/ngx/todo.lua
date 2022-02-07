@@ -1,11 +1,25 @@
 -- TODO hsq module 'ngx.todo'
 local require    = require
 local exportable = exportable
+local assert     = assert
+
+local string     = string
 
 local _G = _G
 
 
 local _ENV = {}
+
+
+-- return 1|nil, str_msg
+local function eof()
+    -- 显式指定响应输出流的结尾。在HTTP 1.1分块编码输出的情况下，它只会触发Nginx内核发送“最后一块”。
+    -- 禁用 HTTP 1.1 keep-alive 特性时，此方法使得编写良好的下游客户端主动关闭连接。
+    --      可用于执行后台任务时避免客户端等待。
+    -- 注意上游模块是否会随着连接关闭中止子请求和主请求，要使其忽略。
+    -- 做后台工作的更好方法是使用 ngx.timer.at API 。
+    return true
+end
 
 
 -- TODO hsq ok, err = ngx.flush(wait?) ， 返回 1 或 nil, msg 。
@@ -28,7 +42,7 @@ local re = {}
 -- from, to, err = ngx.re.find(subject, regex, options?, ctx?, nth?)
 function re.find(subject, regex, options, ctx, nth)
     local ngx = _G.ngx
-    -- { regex = "uris", subject = "/" }
+    -- { regex = "uris", subject = <URI 不带查询串> }
     -- { regex = "json", subject = "text/html, ..."}
     ngx.log(ngx.ERR, (require 'inspect'){
         'find',
@@ -55,6 +69,7 @@ function re.match(subject, regex, options, ctx, res_table)
 end
 -- iterator, err = ngx.re.gmatch(subject, regex, options?)
 function re.gmatch(subject, regex, options)
+-- { "gmatch", options = "o", regex = "/([A-Za-z0-9_]+)", subject = <URI 不带查询串> }
     local ngx = _G.ngx
     ngx.log(ngx.ERR, (require 'inspect'){
         'gmatch',
@@ -62,7 +77,9 @@ function re.gmatch(subject, regex, options)
         regex = regex,
         options = options,
     })
-    return nil, 'TODO hsq re.gmatch'
+    -- return nil, 'TODO hsq re.gmatch'
+    -- return function(...) return nil end
+    return string.gmatch(subject, regex)
 end
 -- newstr, n, err = ngx.re.sub(subject, regex, replace, options?)
 function re.sub(subject, regex, replace, options)
@@ -91,7 +108,8 @@ end
 
 
 return exportable {
-    flush = flush,
+    eof      = eof,
+    flush    = flush,
 
     socket = socket,
 

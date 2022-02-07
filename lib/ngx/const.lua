@@ -9,18 +9,18 @@ local pairs, ipairs, error, tonumber = _G 'pairs, ipairs, error, tonumber'
 local _ENV = {}
 
 
-local NGX_LOG_LEVEL = { [0] = 'STDERR',
+local LOG_LEVEL = { [0] = 'STDERR',
     'EMERG', 'ALERT', 'CRIT', 'ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG',
 }
 
 -- ngx.HTTP_XX
-local NGX_CAPTURE_METHOD = {
+local CAPTURE_METHOD = {
     'GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'MKCOL', 'COPY', 'MOVE',
     'OPTIONS', 'PROPFIND', 'PROPPATCH', 'LOCK', 'UNLOCK', 'PATCH', 'TRACE',
 }
 
 -- ngx.HTTP_XX
-local NGX_HTTP_STATUS = {
+local HTTP_STATUS = {
     CONTINUE               = 100,
     SWITCHING_PROTOCOLS    = 101,
     OK                     = 200,
@@ -59,6 +59,14 @@ local NGX_HTTP_STATUS = {
     INSUFFICIENT_STORAGE   = 507,
 }
 
+local REDIRECT_STATUS = {
+    [HTTP_STATUS.MOVED_PERMANENTLY]  = true,
+    [HTTP_STATUS.MOVED_TEMPORARILY]  = true,
+    [HTTP_STATUS.NOT_MODIFIED]       = true,
+    [HTTP_STATUS.TEMPORARY_REDIRECT] = true,
+    [HTTP_STATUS.PERMANENT_REDIRECT] = true,
+}
+
 
 local ngx_const = {
     -- NULL light userdata
@@ -75,20 +83,20 @@ local ngx_const = {
 }
 
 local logs = {}
-for level, name in pairs(NGX_LOG_LEVEL) do
+for level, name in pairs(LOG_LEVEL) do
     ngx_const[name] = level
     logs[level] = unit[name:lower()] or unit.alert
 end
 
 local cap_mtds_id2name = {}
-for n, k in ipairs(NGX_CAPTURE_METHOD) do
+for n, k in ipairs(CAPTURE_METHOD) do
     n = tointeger(2 ^ n)
     cap_mtds_id2name[n] = k
     ngx_const['HTTP_' .. k] = n
 end
 
 local http_status_id2name = {}
-for k, n in pairs(NGX_HTTP_STATUS) do
+for k, n in pairs(HTTP_STATUS) do
     http_status_id2name[n] = k
     ngx_const['HTTP_' .. k] = n
 end
@@ -113,7 +121,8 @@ end
 
 
 return exportable {
-    NGX_LOG_LEVEL = NGX_LOG_LEVEL,
+    LOG_LEVEL       = LOG_LEVEL,
+    REDIRECT_STATUS = REDIRECT_STATUS,
 
     ngx_const = ngx_const,
 
