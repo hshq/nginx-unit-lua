@@ -1,4 +1,5 @@
-local utils = require 'utils'
+require 'utils'
+local inspect_obj = require 'inspect'
 
 local _G         = _G
 local exportable = _G.exportable
@@ -17,6 +18,8 @@ package.loaded['table.new'] = table.new
 
 local _ENV = {}
 
+
+local _M
 
 local DEBUG = false
 
@@ -59,8 +62,12 @@ local function make_log(level)
     end
 end
 
+local function inspect(obj)
+    _M.debug(inspect_obj(obj))
+end
 
-local _M = {
+
+_M = {
     enable_debug = enable_debug,
 
     log    = log,
@@ -70,6 +77,8 @@ local _M = {
     notice = make_log(LOG_LEVEL.NOTICE),
     info   = make_log(LOG_LEVEL.INFO),
     debug  = make_log(LOG_LEVEL.DEBUG),
+
+    inspect = inspect,
 }
 
 for k, v in pairs(_M) do

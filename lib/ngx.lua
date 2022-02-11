@@ -1,25 +1,29 @@
 local unit      = require 'lnginx-unit'
 local utils     = require 'utils'
-local ngx_const = require 'ngx.const'
 local ngx_proto = require 'ngx.proto'
 
 
-local extend = extend
-local require, assert, error = _G 'require, assert, error'
+local _G = _G
+
+local extend, require, assert, error, pcall =
+    _G 'extend, require, assert, error, pcall'
+
 local next, type, pairs, ipairs, rawget, rawset, tostring, setmetatable =
     _G 'next, type, pairs, ipairs, rawget, rawset, tostring, setmetatable'
+
 local tointeger = math.tointeger
 local lower     = string.lower
 
-local log_alert, log_err, log_warn, log_debug = unit 'alert, err, warn, debug'
 
-local cap_mtds_id2name    = ngx_const.cap_mtds_id2name
-local http_status_id2name = ngx_const.http_status_id2name
-local escape_header_k     = ngx_proto.escape_header_k
-local escape_header_v     = ngx_proto.escape_header_v
-local normalize_header    = ngx_proto.normalize_header
--- local flatten_header      = ngx_proto.flatten_header
-local encode_args         = ngx_proto.encode_args
+local log_alert, log_err, log_warn, log_debug =
+    unit 'alert, err, warn, debug'
+
+
+local REDIRECT_STATUS, cap_mtds_id2name, http_status_id2name =
+    (require 'ngx.const') 'REDIRECT_STATUS, cap_mtds_id2name, http_status_id2name'
+
+local escape_header_k, escape_header_v, normalize_header, encode_args =
+    ngx_proto 'escape_header_k, escape_header_v, normalize_header, encode_args'
 
 local push, clear, join, map, clone, readonly, parseQuery =
     utils 'push, clear, join, map, clone, readonly, parseQuery'
@@ -53,12 +57,13 @@ local function make_ngx(cfg, req, link_num)
         -- ctx = {}, -- 请求上下文，普通表，可覆盖；按需初始化
     }
 
+    -- TODO hsq 并非所有字段都需要 mix
     extend(ngx, ngx_proto)
     ngx.shared = (require 'ngx.shared')(cfg)
 
 
     -- TODO hsq 内部状态集中管理？或者按照功能拆分成子模块？
-    local status = ngx.HTTP_OK
+    local status      = nil -- ngx.HTTP_OK
     local resp_sent   = false
     -- 0-未处理，1-已读，2-已丢弃
     local body_status = 0
@@ -278,8 +283,19 @@ local function make_ngx(cfg, req, link_num)
             resp_headers[k] = v
         end,
     })
-    -- NOTE 返回 k/v 构成的一维向量
-    ngx.get_response_headers = function()
+    -- 显式反送响应头部；没必要调用， ngx.say 和 ngx.print 会自动发送。
+    -- return 1|nil, str_msg
+    ngx.send_headers = function()
+        if resp_sent then
+            return nil, 'header already sent'
+        end
+        resp_sent = true
+        return 1
+    end
+    -- @raw? bool 是否返回原始散列表，否则为 k/v 构成的一维向量。
+    ngx.get_response_headers = function(raw)
+        if raw then return resp_headers end
+
         local vec = {}
         for k, v in pairs(resp_headers) do
             if type(v) ~= 'table' then
@@ -320,8 +336,7 @@ local function make_ngx(cfg, req, link_num)
     ngx.say = function(...)
         -- resp_sent = true
         ngx_print(...)
-        ngx_print('\n')
-        return 1
+        return ngx_print('\n')
     end
     ngx.get_response_content = function()
         resp_sent = true
@@ -340,12 +355,29 @@ local function make_ngx(cfg, req, link_num)
     }
 
 
+    -- NOTE hsq 建议代码风格： return ngx.redirect(...)
+    -- @uri string URI 或完整的外站 URL ，可带参数。
+    -- @status? int HTTP 状态码，见 ngx.const.REDIRECT_STATUS
+    --  302 <==> rewrite ^ <URI>? redirect;  # nginx config
+    --      # rewrite 模块的 rewrite 指令 + redirect 修饰符。
+    --  301 <==> rewrite ^ <URI>? permanent;  # nginx config
+    ngx.redirect = function(uri, status)
+        status = status or 302
+        assert(REDIRECT_STATUS[status])
+        assert(uri and not uri:match('%c'))
+        assert(not resp_sent)
+        ngx.header.location = uri
+        ngx.status = status
+        ngx.exit(status)
+    end
+
+
     ngx.location = {}
 
     -- @uri string 可带 query_string
     -- @options table 可选
     ngx.location.capture = function(uri, options)
-        -- TODO hsq 同步非阻塞，C层内部，无IPC，与ngx.redirect ngx.exec(内部重定向) 不同
+        -- TODO hsq 同步非阻塞，C层内部，无IPC，与 ngx.redirect ngx.exec(内部重定向) 不同
 
         if type(uri) ~= 'string' or uri == '' then
             error(('invalid URI: %s!'):format(uri), 2)

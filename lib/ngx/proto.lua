@@ -39,7 +39,10 @@ local _M = exportable {
     encode_args      = utils.encode_args,
 }
 
-extend(_M, ngx_const.ngx_const)
+extend(_M, ngx_const.CORE)
+extend(_M, ngx_const.HTTP_STATUS)
+extend(_M, ngx_const.LOG_LEVEL)
+extend(_M, ngx_const.CAPTURE_METHOD)
 extend(_M, datetime)
 extend(_M, todo)
 
@@ -49,6 +52,11 @@ function _M.get_phase()
     return 'content'
 end
 
+local exit_statuses = { -- 退出当前 phase ，进入后续。
+    [ngx_const.CORE.OK]    = ngx_const.HTTP_STATUS.HTTP_OK,
+    [ngx_const.CORE.ERROR] = ngx_const.HTTP_STATUS.HTTP_INTERNAL_SERVER_ERROR,
+}
+
 -- NOTE hsq 建议代码风格： return ngx.exit(...)
 --  代码片段：反馈自定内容的错误页
 --      ngx.status = ngx.HTTP_GONE -- 410 Gone
@@ -57,11 +65,7 @@ end
 function _M.exit(status)
     -- TODO hsq 若放在 ngx.lua 中则 upvalue 中有 ngx 。搜索 _G.ngx 。
     local ngx = _G.ngx
-    if status == ngx.OK then -- 退出当前 phase ，进入后续。
-        status = ngx.HTTP_OK
-    elseif status == ngx.ERROR then
-        status = ngx.HTTP_INTERNAL_SERVER_ERROR
-    end
+    status = exit_statuses[status] or status
     assert(type(status) == 'number' and status >= ngx.HTTP_OK)
     -- 中断请求， status 传给 ngx 。
     -- TODO hsq ngx.exit 能否不用 error 来退出并传递信息？

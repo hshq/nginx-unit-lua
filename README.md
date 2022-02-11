@@ -32,6 +32,7 @@ Unit 主进程会启动三个功能性进程控制器、路由器、应用原型
 1.  依赖：
     - [lua-cjson](https://github.com/openresty/lua-cjson)
     - [base64](https://github.com/aklomp/base64)
+    - [luaffifb](https://github.com/facebookarchive/luaffifb)
 
 2.  编译 `build/deps/base64` ：
     1.  - 解压 `build/deps/` 中的 [base64](https://github.com/aklomp/base64) 源码包，

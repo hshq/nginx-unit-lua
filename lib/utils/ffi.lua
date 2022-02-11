@@ -1,7 +1,8 @@
 
 local ffi = require 'ffi'
 local C      = ffi.C
-local Cdef   = ffi.cdef
+-- NOTE hsq 语言服务器支持 ffi.cdef ，不支持其他变量。
+-- local Cdef   = ffi.cdef
 local Cnew   = ffi.new
 local Cstr   = ffi.string
 local Cerrno = ffi.errno
@@ -33,7 +34,7 @@ local function is_nil(cdata)
     return cdata == nil or num == nil or num == 0
 end
 
-Cdef [[
+ffi.cdef [[
     // extern int errno;
     char *strerror(int errnum);
 ]]
@@ -46,7 +47,7 @@ local function Cerr(errno)
 end
 
 
-Cdef [[
+ffi.cdef [[
     typedef int pid_t;
     pid_t getpid(void);
     pid_t getppid(void);
@@ -102,7 +103,7 @@ local function getcwd()
 end
 
 
-Cdef [[
+ffi.cdef [[
     struct tm {
         int	tm_sec;		/* seconds after the minute [0-60] */
         int	tm_min;		/* minutes after the hour [0-59] */
@@ -127,7 +128,7 @@ local function parse_time(time, fmt)
     return not is_nil(ok) and C.timegm(tm) or nil
 end
 
-Cdef [[
+ffi.cdef [[
     struct timeval {
         long    tv_sec;         /* seconds */
         long    tv_usec;        /* and microseconds */
@@ -159,7 +160,7 @@ local function now(all)
     end
 end
 
-Cdef [[
+ffi.cdef [[
     struct timespec {
         time_t tv_sec;	/* seconds */
         long tv_nsec;	/* nanoseconds */

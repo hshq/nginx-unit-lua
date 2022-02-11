@@ -1,5 +1,6 @@
 
 local _VERSION = _VERSION
+-- local package  = package
 local table    = table
 local math     = math
 local _G       = _G
@@ -26,6 +27,14 @@ if _VERSION == 'Lua 5.1' then
             local int = floor(num)
             return int == num and int or nil
         end
+
+else
+
+    -- package.loaded['bit'] = package.loaded['bit'] or {
+    --     rshift = function(a, b) return a >> b end,
+    --     bxor   = function(a, b) return a |  b end,
+    --     band   = function(a, b) return a &  b end,
+    -- }
 
 end
 

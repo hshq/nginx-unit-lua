@@ -57,18 +57,18 @@ described above.
       - is a part of hash-table (embodied by the "conflict" field).
 ]]
 
-local ffi = require "ffi"
-local bit = require "bit"
+local ffi       = require "ffi"
+local crc32_ptr = require 'crc32_ptr'
 
 
-local ffi_new = ffi.new
-local ffi_sizeof = ffi.sizeof
-local ffi_cast = ffi.cast
-local ffi_fill = ffi.fill
-local ngx_now = ngx.now
-local uintptr_t = ffi.typeof("uintptr_t")
-local c_str_t = ffi.typeof("const char*")
-local int_t = ffi.typeof("int")
+local ffi_new     = ffi.new
+local ffi_sizeof  = ffi.sizeof
+local ffi_cast    = ffi.cast
+local ffi_fill    = ffi.fill
+local ngx_now     = ngx.now
+local uintptr_t   = ffi.typeof("uintptr_t")
+local c_str_t     = ffi.typeof("const char*")
+local int_t       = ffi.typeof("int")
 local int_array_t = ffi.typeof("int[?]")
 
 
@@ -118,13 +118,10 @@ local crc_tab = ffi.new("const unsigned int[256]", {
     0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D });
 
 local setmetatable = setmetatable
-local tonumber = tonumber
-local tostring = tostring
-local type = type
+local tonumber     = tonumber
+local tostring     = tostring
+local type         = type
 
-local brshift = bit.rshift
-local bxor = bit.bxor
-local band = bit.band
 
 local new_tab
 do
@@ -191,10 +188,10 @@ local NULL = ffi.null
 -- Append the element "x" to the given queue "h".
 local function queue_insert_tail(h, x)
     local last = h[0].prev
-    x.prev = last
-    last.next = x
-    x.next = h
-    h[0].prev = x
+    x.prev     = last
+    last.next  = x
+    x.next     = h
+    h[0].prev  = x
 end
 
 
@@ -283,23 +280,6 @@ local function ptr2num(ptr)
 end
 
 
-local function crc32_ptr(ptr)
-    local p = brshift(ptr2num(ptr), 3)
-    local b = band(p, 255)
-    local crc32 = crc_tab[b]
-
-    b = band(brshift(p, 8), 255)
-    crc32 = bxor(brshift(crc32, 8), crc_tab[band(bxor(crc32, b), 255)])
-
-    b = band(brshift(p, 16), 255)
-    crc32 = bxor(brshift(crc32, 8), crc_tab[band(bxor(crc32, b), 255)])
-
-    --b = band(brshift(p, 24), 255)
-    --crc32 = bxor(brshift(crc32, 8), crc_tab[band(bxor(crc32, b), 255)])
-    return crc32
-end
-
-
 --========================================================================
 --
 --              Implementation of "export" functions
@@ -341,15 +321,15 @@ function _M.new(size, load_factor)
     until bucket_sz >= bs_min
 
     local self = {
-        size = size,
-        bucket_sz = bucket_sz,
-        free_queue = queue_init(size),
+        size        = size,
+        bucket_sz   = bucket_sz,
+        free_queue  = queue_init(size),
         cache_queue = queue_init(0),
-        node_v = nil,
-        key_v = new_tab(size, 0),
-        val_v = new_tab(size, 0),
-        bucket_v = ffi_new(int_array_t, bucket_sz),
-        num_items = 0,
+        node_v      = nil,
+        key_v       = new_tab(size, 0),
+        val_v       = new_tab(size, 0),
+        bucket_v    = ffi_new(int_array_t, bucket_sz),
+        num_items   = 0,
     }
     -- "node_v" is an array of all the nodes used in the LRU queue. Exprpession
     -- node_v[i] evaluates to the element of ID "i".
@@ -378,8 +358,7 @@ end
 local function hash_string(self, str)
     local c_str = ffi_cast(c_str_t, str)
 
-    local hv = crc32_ptr(c_str)
-    hv = band(hv, self.bucket_sz - 1)
+    local hv = crc32_ptr(ptr2num(c_str), self.bucket_sz - 1)
     -- Hint: bucket is 0-based
     return hv
 end
@@ -423,12 +402,12 @@ end
   nil is returned.
 ]]
 local function remove_key(self, key)
-    local key_v = self.key_v
-    local val_v = self.val_v
-    local node_v = self.node_v
-    local bucket_v = self.bucket_v
+    local key_v     = self.key_v
+    local val_v     = self.val_v
+    local node_v    = self.node_v
+    local bucket_v  = self.bucket_v
 
-    local key_hash = hash_string(self, key)
+    local key_hash  = hash_string(self, key)
     local cur, prev =
         _find_node_in_bucket(key, key_v, node_v, bucket_v[key_hash])
 

@@ -9,66 +9,7 @@ local pairs, ipairs, error, tonumber = _G 'pairs, ipairs, error, tonumber'
 local _ENV = {}
 
 
-local LOG_LEVEL = { [0] = 'STDERR',
-    'EMERG', 'ALERT', 'CRIT', 'ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG',
-}
-
--- ngx.HTTP_XX
-local CAPTURE_METHOD = {
-    'GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'MKCOL', 'COPY', 'MOVE',
-    'OPTIONS', 'PROPFIND', 'PROPPATCH', 'LOCK', 'UNLOCK', 'PATCH', 'TRACE',
-}
-
--- ngx.HTTP_XX
-local HTTP_STATUS = {
-    CONTINUE               = 100,
-    SWITCHING_PROTOCOLS    = 101,
-    OK                     = 200,
-    CREATED                = 201,
-    ACCEPTED               = 202,
-    NO_CONTENT             = 204,
-    PARTIAL_CONTENT        = 206,
-    SPECIAL_RESPONSE       = 300,
-    MOVED_PERMANENTLY      = 301,
-    MOVED_TEMPORARILY      = 302,
-    SEE_OTHER              = 303,
-    NOT_MODIFIED           = 304,
-    TEMPORARY_REDIRECT     = 307,
-    PERMANENT_REDIRECT     = 308,
-    BAD_REQUEST            = 400,
-    UNAUTHORIZED           = 401,
-    PAYMENT_REQUIRED       = 402,
-    FORBIDDEN              = 403,
-    NOT_FOUND              = 404,
-    NOT_ALLOWED            = 405,
-    NOT_ACCEPTABLE         = 406,
-    REQUEST_TIMEOUT        = 408,
-    CONFLICT               = 409,
-    GONE                   = 410,
-    UPGRADE_REQUIRED       = 426,
-    TOO_MANY_REQUESTS      = 429,
-    CLOSE                  = 444,
-    ILLEGAL                = 451,
-    INTERNAL_SERVER_ERROR  = 500,
-    NOT_IMPLEMENTED        = 501,
-    METHOD_NOT_IMPLEMENTED = 501, -- (kept for compatibility)
-    BAD_GATEWAY            = 502,
-    SERVICE_UNAVAILABLE    = 503,
-    GATEWAY_TIMEOUT        = 504,
-    VERSION_NOT_SUPPORTED  = 505,
-    INSUFFICIENT_STORAGE   = 507,
-}
-
-local REDIRECT_STATUS = {
-    [HTTP_STATUS.MOVED_PERMANENTLY]  = true,
-    [HTTP_STATUS.MOVED_TEMPORARILY]  = true,
-    [HTTP_STATUS.NOT_MODIFIED]       = true,
-    [HTTP_STATUS.TEMPORARY_REDIRECT] = true,
-    [HTTP_STATUS.PERMANENT_REDIRECT] = true,
-}
-
-
-local ngx_const = {
+local CORE = {
     -- NULL light userdata
     null = cjson.null,
     -- NOTE hsq Nginx API for Lua 只用其中 3 个，如
@@ -82,23 +23,83 @@ local ngx_const = {
     DECLINED = -5,
 }
 
-local logs = {}
-for level, name in pairs(LOG_LEVEL) do
-    ngx_const[name] = level
+
+local LOG_LEVEL_VEC = { [0] = 'STDERR',
+    'EMERG', 'ALERT', 'CRIT', 'ERR', 'WARN', 'NOTICE', 'INFO', 'DEBUG',
+}
+local LOG_LEVEL = {} -- name -> id
+
+-- ngx.HTTP_XX
+local CAPTURE_METHOD_VEC = {
+    'GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'MKCOL', 'COPY', 'MOVE',
+    'OPTIONS', 'PROPFIND', 'PROPPATCH', 'LOCK', 'UNLOCK', 'PATCH', 'TRACE',
+}
+local CAPTURE_METHOD = {} -- name -> id
+
+-- ngx.HTTP_XX
+local HTTP_STATUS = {
+    HTTP_CONTINUE               = 100,
+    HTTP_SWITCHING_PROTOCOLS    = 101,
+    HTTP_OK                     = 200,
+    HTTP_CREATED                = 201,
+    HTTP_ACCEPTED               = 202,
+    HTTP_NO_CONTENT             = 204,
+    HTTP_PARTIAL_CONTENT        = 206,
+    HTTP_SPECIAL_RESPONSE       = 300,
+    HTTP_MOVED_PERMANENTLY      = 301,
+    HTTP_MOVED_TEMPORARILY      = 302,
+    HTTP_SEE_OTHER              = 303,
+    HTTP_NOT_MODIFIED           = 304,
+    HTTP_TEMPORARY_REDIRECT     = 307,
+    HTTP_PERMANENT_REDIRECT     = 308,
+    HTTP_BAD_REQUEST            = 400,
+    HTTP_UNAUTHORIZED           = 401,
+    HTTP_PAYMENT_REQUIRED       = 402,
+    HTTP_FORBIDDEN              = 403,
+    HTTP_NOT_FOUND              = 404,
+    HTTP_NOT_ALLOWED            = 405,
+    HTTP_NOT_ACCEPTABLE         = 406,
+    HTTP_REQUEST_TIMEOUT        = 408,
+    HTTP_CONFLICT               = 409,
+    HTTP_GONE                   = 410,
+    HTTP_UPGRADE_REQUIRED       = 426,
+    HTTP_TOO_MANY_REQUESTS      = 429,
+    HTTP_CLOSE                  = 444,
+    HTTP_ILLEGAL                = 451,
+    HTTP_INTERNAL_SERVER_ERROR  = 500,
+    HTTP_NOT_IMPLEMENTED        = 501,
+    HTTP_METHOD_NOT_IMPLEMENTED = 501, -- (kept for compatibility)
+    HTTP_BAD_GATEWAY            = 502,
+    HTTP_SERVICE_UNAVAILABLE    = 503,
+    HTTP_GATEWAY_TIMEOUT        = 504,
+    HTTP_VERSION_NOT_SUPPORTED  = 505,
+    HTTP_INSUFFICIENT_STORAGE   = 507,
+}
+
+local REDIRECT_STATUS = { -- Set
+    [HTTP_STATUS.HTTP_MOVED_PERMANENTLY]  = true,
+    [HTTP_STATUS.HTTP_MOVED_TEMPORARILY]  = true,
+    [HTTP_STATUS.HTTP_NOT_MODIFIED]       = true,
+    [HTTP_STATUS.HTTP_TEMPORARY_REDIRECT] = true,
+    [HTTP_STATUS.HTTP_PERMANENT_REDIRECT] = true,
+}
+
+local logs = {}  -- level -> function
+for level, name in pairs(LOG_LEVEL_VEC) do
+    LOG_LEVEL[name] = level
     logs[level] = unit[name:lower()] or unit.alert
 end
 
 local cap_mtds_id2name = {}
-for n, k in ipairs(CAPTURE_METHOD) do
+for n, k in ipairs(CAPTURE_METHOD_VEC) do
     n = tointeger(2 ^ n)
     cap_mtds_id2name[n] = k
-    ngx_const['HTTP_' .. k] = n
+    CAPTURE_METHOD['HTTP_' .. k] = n
 end
 
 local http_status_id2name = {}
 for k, n in pairs(HTTP_STATUS) do
     http_status_id2name[n] = k
-    ngx_const['HTTP_' .. k] = n
 end
 
 
@@ -121,10 +122,12 @@ end
 
 
 return exportable {
-    LOG_LEVEL       = LOG_LEVEL,
-    REDIRECT_STATUS = REDIRECT_STATUS,
+    CORE           = CORE,
+    HTTP_STATUS    = HTTP_STATUS,
+    LOG_LEVEL      = LOG_LEVEL,
+    CAPTURE_METHOD = CAPTURE_METHOD,
 
-    ngx_const = ngx_const,
+    REDIRECT_STATUS = REDIRECT_STATUS,
 
     logs                = logs,
     cap_mtds_id2name    = cap_mtds_id2name,

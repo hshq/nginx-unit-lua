@@ -34,6 +34,7 @@ And several application processes, and various processes communicate with each o
 1.  dependence：
     - [lua-cjson](https://github.com/openresty/lua-cjson)
     - [base64](https://github.com/aklomp/base64)
+    - [luaffifb](https://github.com/facebookarchive/luaffifb)
 
 2.  Compile `build/deps/base64` :
     1.  - Unzip [base64](https://github.com/aklomp/base64) Source package in `build/deps/`,
