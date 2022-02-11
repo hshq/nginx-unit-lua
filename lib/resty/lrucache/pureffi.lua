@@ -358,7 +358,7 @@ end
 local function hash_string(self, str)
     local c_str = ffi_cast(c_str_t, str)
 
-    local hv = crc32_ptr(ptr2num(c_str), self.bucket_sz - 1)
+    local hv = crc32_ptr(ptr2num(c_str), crc_tab, self.bucket_sz - 1)
     -- Hint: bucket is 0-based
     return hv
 end
